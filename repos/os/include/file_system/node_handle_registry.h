@@ -214,6 +214,17 @@ namespace File_system {
 				 */
 				listener = Listener(sigh);
 				node->add_listener(&listener);
+
+				/*
+				 * Trigger signal initially. Otherwise file changes between the
+				 * time when the node handle was created and the time when the
+				 * signal handler is installed (now) may go unnoticed. By
+				 * generating an artificial change notification, we ensure that
+				 * the file-system client processes the file version that is
+				 * current at the time of registering the signal handler.
+				 */
+				if (sigh.valid())
+					Genode::Signal_transmitter(sigh).submit();
 			}
 	};
 }
