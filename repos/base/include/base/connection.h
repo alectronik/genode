@@ -16,6 +16,7 @@
 
 #include <base/env.h>
 #include <base/capability.h>
+#include <base/log.h>
 
 namespace Genode { template <typename> class Connection; }
 
@@ -57,8 +58,14 @@ class Genode::Connection : public Noncopyable
 
 			va_end(list);
 
-			/* call parent interface with the resulting argument buffer */
-			return parent.session<SESSION_TYPE>(buf, affinity);
+			try {
+				/* call parent interface with the resulting argument buffer */
+				return parent.session<SESSION_TYPE>(buf, affinity);
+			} catch (...) {
+				warning(SESSION_TYPE::service_name(), "-session creation failed "
+				        "(", Cstring(buf), ")");
+				throw;
+			}
 		}
 
 	public:
