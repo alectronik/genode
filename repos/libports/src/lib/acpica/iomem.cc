@@ -159,7 +159,9 @@ class Acpica::Io_mem
 
 		Genode::addr_t pre_expand(ACPI_PHYSICAL_ADDRESS p, ACPI_SIZE s)
 		{
-			Genode::destroy(Genode::env()->heap(), _io_mem);
+			if (_io_mem)
+				Genode::destroy(Genode::env()->heap(), _io_mem);
+
 			_io_mem = nullptr;
 
 			Genode::addr_t xsize = _phys - p + _size;
