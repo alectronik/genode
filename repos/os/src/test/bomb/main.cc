@@ -170,10 +170,14 @@ void Component::construct(Genode::Env &env)
 	unsigned long const demand = node.attribute_value("demand", 1024UL * 1024);
 
 	log("--- bomb started ---");
-	if (timer())
+
+	/* try to create timer session, if it fails, bomb is our parent */
+	static Lazy_volatile_object<Timer::Connection> timer;
+	try { timer.construct(env); } catch (Parent::Service_denied) { }
+
+	if (timer.constructed())
 		log("rounds=", rounds, " generations=", generation, " children=",
 		    children, " sleep=", sleeptime, " demand=", demand/1024, "K");
-
 
 	/* names of services provided by the parent */
 	static const char *names[] = {
@@ -195,10 +199,6 @@ void Component::construct(Genode::Env &env)
 		log("I'm a leaf node - generation 0");
 		sleep_forever();
 	}
-
-	/* try to create timer session, if it fails, bomb is our parent */
-	static Lazy_volatile_object<Timer::Connection> timer;
-	try { timer.construct(env); } catch (Parent::Service_denied) { }
 
 	static Children child_registry;
 
