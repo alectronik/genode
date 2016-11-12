@@ -35,9 +35,6 @@ struct Genode::Upgradeable_client : CLIENT
 
 	void upgrade_ram(size_t quota)
 	{
-		log("upgrading quota donation for Env::", CLIENT::Rpc_interface::service_name(),
-		    " (", quota, " bytes)");
-
 		char buf[128];
 		snprintf(buf, sizeof(buf), "ram_quota=%lu", quota);
 
