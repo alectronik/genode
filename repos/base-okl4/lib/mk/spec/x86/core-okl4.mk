@@ -1,6 +1,4 @@
-include $(REP_DIR)/lib/mk/core.inc
-
-REQUIRES += x86
+include $(REP_DIR)/lib/mk/core-okl4.inc
 
 SRC_CC   += io_port_session_component.cc \
             io_port_session_support.cc \

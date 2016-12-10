@@ -1,4 +1,5 @@
-REQUIRES       = x86 32bit
+OKL4_SRC_DIR   = $(call select_from_ports,okl4)/src/kernel/okl4
+
 CONFIG         = ARCH_IA32 \
                  CONFIG_ARCH_IA32=1 \
                  CONFIG_CPU_IA32_I686 \
@@ -43,12 +44,12 @@ SRC_SPP        = arch/ia32/pistachio/src/trap.spp \
                  arch/ia32/pistachio/src/gnu/bootmem-elf.spp \
                  platform/pc99/pistachio/src/smp.spp \
                  platform/pc99/pistachio/src/startup.spp
-LD_TEXT_ADDR   = 0xf0100000
+LD_TEXT_ADDR  := 0xf0100000
 
--include $(REP_DIR)/src/kernel/target.inc
+-include $(REP_DIR)/lib/mk/kernel-okl4.inc
 
 LD_SCRIPT_STATIC = $(REP_DIR)/contrib/generated/x86/linker.ld
-INC_DIR          = $(OKL4_BUILD_DIR)/include \
+INC_DIR          = include \
                    $(REP_DIR)/contrib/generated/x86 \
                    $(OKL4_SRC_DIR)/pistachio/include
 

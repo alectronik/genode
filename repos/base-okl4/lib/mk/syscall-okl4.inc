@@ -1,15 +1,10 @@
 #
-# Create prerequisites for building Genode for OKL4
-#
-# Prior building Genode programs for OKL4, the kernel bindings needed are
-# symlinked to the build directory.
-#
-
-#
 # Execute the rules in this file only at the second build stage when we know
 # about the complete build settings, e.g., the 'CROSS_DEV_PREFIX'.
 #
 ifeq ($(called_from_lib_mk),yes)
+
+include $(REP_DIR)/lib/import/import-syscall-okl4.mk
 
 #
 # Make OKL4 kernel API headers available to the Genode build system
@@ -25,8 +20,8 @@ OKL4_L4_INCLUDES = arch.h cache.h caps.h config.h interrupt.h ipc.h kdebug.h \
                    pagefault.h procdesc.h profile.h schedule.h security.h \
                    space.h thread.h time.h types.h utcb.h
 
-OKL4_INCLUDE_SYMLINKS += $(addprefix $(BUILD_BASE_DIR)/include/l4/,$(OKL4_L4_INCLUDES))
-OKL4_INCLUDE_SYMLINKS += $(addprefix $(BUILD_BASE_DIR)/include/,compat bootinfo)
+OKL4_INCLUDE_SYMLINKS += $(addprefix include/l4/,$(OKL4_L4_INCLUDES))
+OKL4_INCLUDE_SYMLINKS += $(addprefix include/,compat bootinfo)
 
 OKL4_INCLUDE_DIRS = $(sort $(dir $(OKL4_INCLUDE_SYMLINKS)))
 
@@ -45,13 +40,13 @@ $(OKL4_DIR):
 
 $(OKL4_DIR)/%: $(filter-out $(wildcard $(OKL4_DIR)), $(OKL4_DIR))
 
-$(BUILD_BASE_DIR)/include/l4/%.h: $(OKL4_DIR)/libs/l4/include/%.h
+include/l4/%.h: $(OKL4_DIR)/libs/l4/include/%.h
 	$(VERBOSE)ln -sf $< $@
 
-$(BUILD_BASE_DIR)/include/compat: $(OKL4_DIR)/libs/compat/include/compat
+include/compat: $(OKL4_DIR)/libs/compat/include/compat
 	$(VERBOSE)ln -sf $< $@
 
-$(BUILD_BASE_DIR)/include/bootinfo: $(OKL4_DIR)/libs/bootinfo/include
+include/bootinfo: $(OKL4_DIR)/libs/bootinfo/include
 	$(VERBOSE)ln -sf $< $@
 
 endif

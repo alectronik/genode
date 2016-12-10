@@ -1,4 +1,3 @@
-OKL4_BUILD_DIR = $(BUILD_BASE_DIR)/kernel
 OKL4_SRC_DIR   = $(call select_from_ports,okl4)/src/kernel/okl4
 ARCH_DIR       = $(OKL4_SRC_DIR)/arch/ia32
 PLAT_DIR       = $(OKL4_SRC_DIR)/platform/pc99
@@ -90,23 +89,23 @@ INC_SYMLINKS   = arch/apic.h \
                  plat/nmi.h \
                  plat/rtc.h
 
-include $(REP_DIR)/lib/mk/kernel.inc
+include $(REP_DIR)/lib/mk/kernel-okl4-include.inc
 
-$(OKL4_BUILD_DIR)/include/atomic_ops/arch/%.h: $(ARCH_DIR)/libs/atomic_ops/include/%.h
+include/atomic_ops/arch/%.h: $(ARCH_DIR)/libs/atomic_ops/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/l4/arch/%.h: $(ARCH_DIR)/libs/l4/include/%.h
+include/l4/arch/%.h: $(ARCH_DIR)/libs/l4/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/kernel/arch/%.h: $(ARCH_DIR)/pistachio/include/%.h
+include/kernel/arch/%.h: $(ARCH_DIR)/pistachio/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/arch/%.h: $(ARCH_DIR)/pistachio/include/%.h
+include/arch/%.h: $(ARCH_DIR)/pistachio/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/cpu/%.h: $(ARCH_DIR)/pistachio/cpu/idt/include/%.h
+include/cpu/%.h: $(ARCH_DIR)/pistachio/cpu/idt/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/plat/%.h: $(PLAT_DIR)/pistachio/include/%.h
+include/plat/%.h: $(PLAT_DIR)/pistachio/include/%.h
 	$(VERBOSE)ln -s $< $@
 

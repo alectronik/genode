@@ -1,9 +1,5 @@
-TARGET           = kernel
-OKL4_SRC_DIR     = $(call select_from_ports,okl4)/src/kernel/okl4
-OKL4_BUILD_DIR   = $(BUILD_BASE_DIR)/kernel
-REQUIRES        += okl4
-LIBS             = kernel
-SRC_O           += $(addprefix $(OKL4_BUILD_DIR)/asm/,$(addsuffix .o,$(basename $(SRC_SPP))))
+LIBS             = kernel-okl4-include
+SRC_O           += $(addprefix asm/,$(addsuffix .o,$(basename $(SRC_SPP))))
 SRC_CC          += $(subst $(OKL4_SRC_DIR)/,,$(wildcard $(OKL4_SRC_DIR)/pistachio/kdb/src/*.cc)) \
                    $(subst $(OKL4_SRC_DIR)/,,$(wildcard $(OKL4_SRC_DIR)/pistachio/src/*.cc))
 CONFIG          += __API__=v4 \
@@ -44,8 +40,11 @@ CC_OPT          += -Wno-write-strings -Wredundant-decls -Wundef \
                    -fno-asynchronous-unwind-tables \
                    -finline-limit=99999999 $(addprefix -D,$(CONFIG)) \
                    "-D__USER__=\"Genode Labs\""
+CC_OPT          += -DCONFIG_MAX_THREAD_BITS=10
 
-CC_WARN = -Wall -Wno-unused-but-set-variable -Wno-uninitialized
+CC_OPT_PIC       =
+
+CC_WARN := -Wall -Wno-unused-but-set-variable -Wno-uninitialized
 
 #
 # Enforce building the kernel with -O3. Otherwise, the kernel build would fail
@@ -54,13 +53,10 @@ CC_WARN = -Wall -Wno-unused-but-set-variable -Wno-uninitialized
 #
 override CC_OLEVEL = -O3
 
-$(OKL4_BUILD_DIR)/asm/%.o: $(OKL4_SRC_DIR)/%.spp
+asm/%.o: $(OKL4_SRC_DIR)/%.spp
 	$(MSG_COMP)$*.spp
 	$(VERBOSE)$(CC) $(CC_MARCH) -x assembler-with-cpp -DASSEMBLY \
                     $(addprefix -D,$(CONFIG)) \
                     $(addprefix -I,$(INC_DIR)) -c $< -o $@
-
-clean cleanall:
-	$(VERBOSE)rm -rf $(OKL4_BUILD_DIR)
 
 vpath %.cc $(OKL4_SRC_DIR)

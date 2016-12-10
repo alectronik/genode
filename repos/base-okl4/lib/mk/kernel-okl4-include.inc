@@ -67,31 +67,33 @@ INC_SYMLINKS  += atomic_ops/atomic_ops.h \
                  l4/macros.h \
                  l4/types.h
 
-SYMLINK_TARGETS = $(addprefix $(OKL4_BUILD_DIR)/include/,$(INC_SYMLINKS))
+SYMLINK_TARGETS = $(addprefix include/,$(INC_SYMLINKS))
 SYMLINK_DIRS    = $(sort $(dir $(SYMLINK_TARGETS)))
 
+ifeq ($(called_from_lib_mk),yes)
 all: $(SYMLINK_TARGETS)
+endif
 
 $(SYMLINK_TARGETS): $(filter-out $(wildcard $(SYMLINK_DIRS)), $(SYMLINK_DIRS))
 
 $(SYMLINK_DIRS):
 	$(VERBOSE)mkdir -p $@
 
-$(OKL4_BUILD_DIR)/include/kernel/kdb/%.h: $(OKL4_SRC_DIR)/pistachio/kdb/include/%.h
+include/kernel/kdb/%.h: $(OKL4_SRC_DIR)/pistachio/kdb/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/kdb/%.h: $(OKL4_SRC_DIR)/pistachio/kdb/include/%.h
+include/kdb/%.h: $(OKL4_SRC_DIR)/pistachio/kdb/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/kernel/%.h: $(OKL4_SRC_DIR)/pistachio/include/%.h
+include/kernel/%.h: $(OKL4_SRC_DIR)/pistachio/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/compat/%.h: $(OKL4_SRC_DIR)/libs/compat/include/compat/%.h
+include/compat/%.h: $(OKL4_SRC_DIR)/libs/compat/include/compat/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/atomic_ops/%.h: $(OKL4_SRC_DIR)/libs/atomic_ops/include/%.h
+include/atomic_ops/%.h: $(OKL4_SRC_DIR)/libs/atomic_ops/include/%.h
 	$(VERBOSE)ln -s $< $@
 
-$(OKL4_BUILD_DIR)/include/l4/%.h: $(OKL4_SRC_DIR)/libs/l4/include/%.h
+include/l4/%.h: $(OKL4_SRC_DIR)/libs/l4/include/%.h
 	$(VERBOSE)ln -s $< $@
 
