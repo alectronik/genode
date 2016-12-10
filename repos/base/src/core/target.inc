@@ -1,5 +1,4 @@
 TARGET   = core
-LIBS     = core
 CORE_OBJ = core.o
 
 $(TARGET): $(CORE_OBJ)
