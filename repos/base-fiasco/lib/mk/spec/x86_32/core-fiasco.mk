@@ -1,4 +1,4 @@
-include $(REP_DIR)/lib/mk/core.inc
+include $(REP_DIR)/lib/mk/core-fiasco.inc
 
 LIBS   += base-fiasco-common
 SRC_CC += platform_x86.cc

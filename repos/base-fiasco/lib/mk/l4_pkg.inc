@@ -8,8 +8,6 @@
 #          the target
 #
 
-LIBS += platform
-
 ifeq ($(filter-out $(SPECS),x86_32),)
 	L4_BUILD_ARCH := x86
 endif
@@ -19,19 +17,27 @@ ifeq ($(filter-out $(SPECS),arm),)
 endif
 
 ifeq ($(L4_BUILD_ARCH),)
-all: l4_build_arch_undefined
-	$(VERBOSE)$(ECHO) "Error: L4_BUILD_ARCH undefined, architecture not supported"
-	$(VERBOSE)false
+$(error L4_BUILD_ARCH undefined, architecture not supported)
 endif
 
-L4_PKG_DIR   = $(L4_SRC_DIR)/l4/pkg
-PKG_TAGS     = $(addsuffix .tag,$(PKGS))
+ifndef L4_BUILD_DIR
+$(error L4_BUILD_DIR undefined)
+endif
+
+L4_PKG_DIR = $(L4_SRC_DIR)/l4/pkg
+PKG_TAGS   = $(addsuffix .tag,$(PKGS))
 
 ifeq ($(VERBOSE),)
 L4_VERBOSE = V=1
 endif
 
-$(TARGET): $(PKG_TAGS)
+#
+# Execute the rules in this file only at the second build stage when we know
+# about the complete build settings, e.g., 'CROSS_DEV_PREFIX'.
+#
+ifeq ($(called_from_lib_mk),yes)
+all: $(PKG_TAGS)
+endif
 
 #
 # We preserve the order of processing 'l4/pkg/' directories because of
@@ -54,15 +60,4 @@ $(TARGET): $(PKG_TAGS)
 	                      CXX="$(CROSS_DEV_PREFIX)g++" \
 	                      LD="$(CROSS_DEV_PREFIX)ld"
 	$(VERBOSE)mkdir -p $(dir $@) && touch $@
-
-clean cleanall: clean_tags
-
-# if (pseudo) target is named after a directory, remove the whole subtree
-clean_prg_objects: clean_dir_named_as_target
-
-clean_dir_named_as_target:
-	$(VERBOSE)(test -d $(TARGET) && rm -rf $(TARGET)) || true
-
-clean_tags:
-	$(VERBOSE)rm -f $(PKG_TAGS)
 

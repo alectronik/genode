@@ -3,4 +3,4 @@
 #
 L4_CONFIG = $(REP_DIR)/config/l4env-config.x86
 
-include $(REP_DIR)/lib/mk/platform.inc
+include $(REP_DIR)/lib/mk/syscall-fiasco.inc
