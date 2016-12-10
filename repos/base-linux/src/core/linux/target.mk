@@ -1,6 +1,6 @@
-TARGET        = core
+TARGET        = core-linux
 REQUIRES      = linux
-LIBS          = cxx base-linux-common syscall startup
+LIBS          = cxx base-linux-common syscall-linux startup
 
 GEN_CORE_DIR  = $(BASE_DIR)/src/core
 
@@ -38,7 +38,9 @@ INC_DIR      += $(REP_DIR)/src/core/include \
                 $(REP_DIR)/src/include \
                 $(BASE_DIR)/src/include
 
-HOST_INC_DIR += /usr/include
+LD_TEXT_ADDR     ?= 0x01000000
+LD_SCRIPT_STATIC  = $(call select_from_repositories,src/ld/genode.ld) \
+                    $(call select_from_repositories,src/ld/stack_area.nostdlib.ld)
 
 include $(GEN_CORE_DIR)/version.inc
 
@@ -59,4 +61,4 @@ vpath thread.cc                   $(BASE_DIR)/src/lib/base
 vpath thread_myself.cc            $(BASE_DIR)/src/lib/base
 vpath trace.cc                    $(BASE_DIR)/src/lib/base
 vpath env_reinit.cc               $(REP_DIR)/src/lib/base
-vpath %.cc                        $(PRG_DIR)
+vpath %.cc                        $(REP_DIR)/src/core
