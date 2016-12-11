@@ -1,5 +1,4 @@
-REQUIRES     = pistachio
-LIBS         = base-pistachio-common
+LIBS         = base-pistachio-common syscall-pistachio
 
 GEN_CORE_DIR = $(BASE_DIR)/src/core
 

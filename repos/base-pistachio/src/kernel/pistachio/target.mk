@@ -1,15 +1,18 @@
 TARGET           = kernel
 REQUIRES        += pistachio
-KERNEL_BUILD_DIR = $(BUILD_BASE_DIR)/kernel/pistachio
+KERNEL_BUILD_DIR = $(BUILD_BASE_DIR)/kernel/pistachio/build
 KERNEL           = $(KERNEL_BUILD_DIR)/x86-kernel
 KERNEL_SRC      := $(call select_from_ports,pistachio)/src/kernel/pistachio/kernel
 
 LIBGCC_DIR = $(dir $(shell $(CC) $(CC_MARCH) -print-libgcc-file-name))
 GCCINC_DIR = $(dir $(shell $(CC) -print-libgcc-file-name))include
 
-$(TARGET): $(KERNEL)
+KERNEL_CCFLAGS := $(CC_MARCH)
+KERNEL_CCFLAGS += -Wno-unused-function -Wno-array-bounds -Wno-narrowing \
+                  -Wno-unused-but-set-variable -Wno-maybe-uninitialized \
+                  -Wno-unused-variable
 
-.PHONY: $(KERNEL)
+$(TARGET): $(KERNEL)
 
 $(KERNEL_BUILD_DIR)/Makefile:
 	$(VERBOSE_MK) MAKEFLAGS= $(MAKE) $(VERBOSE_DIR) -C $(KERNEL_SRC) BUILDDIR=$(dir $@)
@@ -43,18 +46,35 @@ $(KERNEL_BUILD_DIR)/Makefile:
 #
 
 $(KERNEL_BUILD_DIR)/config/.config: $(KERNEL_BUILD_DIR)/Makefile
-	$(VERBOSE_MK)CCFLAGS="$(CC_MARCH)" MAKEFLAGS= \
-	             $(MAKE) $(VERBOSE_DIR) -C $(KERNEL_BUILD_DIR) batchconfig \
+	$(VERBOSE_MK)CCFLAGS="$(KERNEL_CCFLAGS)" MAKEFLAGS=-s \
+	             $(MAKE) -s $(VERBOSE_DIR) -C $(KERNEL_BUILD_DIR) batchconfig \
 	                     GCCINSTALLDIR=$(LIBGCC_DIR)
 
 $(KERNEL): $(KERNEL_BUILD_DIR)/config/.config
-	$(VERBOSE_MK)CCFLAGS="$(CC_MARCH)" LDFLAGS="$(LD_MARCH)" ASMFLAGS="$(CC_MARCH)" MAKEFLAGS= \
-	             $(MAKE) $(VERBOSE_DIR) -C $(KERNEL_BUILD_DIR) \
+	$(VERBOSE_MK)CCFLAGS="$(KERNEL_CCFLAGS)" LDFLAGS="$(LD_MARCH)" \
+	             ASMFLAGS="$(CC_MARCH)" MAKEFLAGS= \
+	             $(MAKE) -s $(VERBOSE_DIR) -C $(KERNEL_BUILD_DIR) \
 	                     TOOLPREFIX=$(CROSS_DEV_PREFIX) \
 	                     GCCINSTALLDIR=$(LIBGCC_DIR) \
 	                     LIBGCCINC=$(GCCINC_DIR)
-	$(VERBOSE)ln -sf $@ $(BUILD_BASE_DIR)/bin/$(TARGET)
-	$(VERBOSE)touch $@
+	$(VERBOSE)ln -sf $(KERNEL_BUILD_DIR)/x86-kernel $@
 
 clean cleanall:
 	$(VERBOSE)rm -rf $(KERNEL_BUILD_DIR)
+
+
+#
+# Install symlinks for sigma0 and kickstart at kernel/pistachio/
+#
+# The 'LIBS' dependency ensures that the Pistachio userland is built before.
+#
+LIBS += syscall-pistachio
+
+$(TARGET): sigma0 kickstart
+
+sigma0:
+	$(VERBOSE)ln -sf $(LIB_CACHE_DIR)/syscall-pistachio/serv/sigma0/sigma0
+
+kickstart:
+	$(VERBOSE)ln -sf $(LIB_CACHE_DIR)/syscall-pistachio/util/kickstart/kickstart
+
