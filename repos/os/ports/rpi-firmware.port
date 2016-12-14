@@ -1,0 +1,13 @@
+LICENSE   := BSD
+DOWNLOADS := start.elf.file bootcode.bin.file
+VERSION   := git
+
+GIT_REV := 6d45dcf869688163fa1c745cb059b14baf61b8fd
+
+URL := https://github.com/raspberrypi/firmware/raw/$(GIT_REV)/boot
+
+URL(start.elf) := $(URL)/start.elf
+SHA(start.elf) := f240ad1062b6104f1aef9509e97f52d643e1012b
+
+URL(bootcode.bin) := $(URL)/bootcode.bin
+SHA(bootcode.bin) := d367b93963f4026989de9e481fbd6730d389d0f0

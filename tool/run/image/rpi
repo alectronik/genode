@@ -1,0 +1,65 @@
+#
+# Create disk image with contents of the run directory
+#
+# \param --image-rpi-size   disk size in MiB (optional)
+#
+
+requires_installation_of mcopy
+requires_installation_of mkfs.vfat
+
+
+proc image_rpi_size { } { return [get_cmd_arg --image-rpi-size 0] }
+
+
+proc rpi_firmware_dir { } {
+	return [exec [genode_dir]/tool/ports/current -s rpi-firmware] }
+
+
+if {![file exists [rpi_firmware_dir]]} {
+	puts stderr "\nError: Raspberry-Pi firmware not installed\n"
+	puts stderr "You may install it using the following command:\n"
+	puts stderr "  [genode_dir]/tool/ports/prepare_port rpi-firmware\n"
+	exit -1
+}
+
+
+##
+# Create disk image with the content of the run directory
+#
+proc run_image { {unused ""} } {
+
+	set run_size [expr [regsub {\s.*} [exec du -sm [run_dir]] {}] + 8]
+	if {[image_rpi_size] > 0} {
+		set disk_size [image_rpi_size]
+	} else {
+		set disk_size $run_size
+	}
+
+	# create raw binary from elf image
+	exec [cross_dev_prefix]objcopy -Obinary [run_dir]/image.elf [run_dir]/image.bin
+
+	# generate config.txt
+	set fd [open [run_dir]/config.txt "w"]
+	puts $fd "kernel genode.bin"
+	close $fd
+
+	# generate head space designated for the partition table
+	exec dd if=/dev/zero of=[run_dir].header count=2048 bs=512 2>/dev/null
+
+	exec dd if=/dev/zero of=[run_dir].partition bs=1M count=$disk_size 2>/dev/null
+	exec mkfs.vfat -n GENODE [run_dir].partition
+
+	# copy content to disk image
+	exec mcopy -i [run_dir].partition [rpi_firmware_dir]/bootcode.bin ::
+	exec mcopy -i [run_dir].partition [rpi_firmware_dir]/start.elf ::
+	exec mcopy -i [run_dir].partition [run_dir]/config.txt ::
+	exec mcopy -i [run_dir].partition [run_dir]/image.bin ::
+
+	exec cat [run_dir].header [run_dir].partition > [run_dir].img
+
+	exec parted -s [run_dir].img -- mklabel msdos mkpart primary fat32 2048s -1s set 1 boot on
+
+	exec rm -f [run_dir].header [run_dir].partition
+
+	puts "\n Created SD-card image for the Raspberry Pi '[run_dir].img' ($disk_size MiB)\n"
+}
