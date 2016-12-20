@@ -1,3 +1,43 @@
+#
+# \brief  Genode application binary interface (ABI)
+# \author Norman Feske
+# \date   2016-12-20
+#
+# This file contains the binary application interface (ABI) provided by
+# Genode's dynamic linker. Each line contains the name of a symbol followed
+# by its type (according to the encoding used by binutil's 'nm' tool). Data
+# symbols are furher annotated by the size of their corresponding data object.
+# The latter is only needed on ARM.
+#
+# On the ARM architecture, copy relocations are created for read-only data
+# objects that are present in shared libraries. For each data object, the
+# linker preserves a slot in the program's BSS according to the object size.
+# At runtime, the dynamic linker copies the data from the shared library's
+# read-only segment to these slots. The copy relocations for a given binary
+# can be inspected via 'objdump -R'. The size of data symbols as present in a
+# shared library (like 'ld-hw.lib.a') can be inspected via 'nm --format posix'.
+# The data-object sizes as annotated here must always be at least as big as the
+# corresponding data objects present in the dynamic linker.
+#
+# The original version of this file is based on the output of the
+# 'tool/abi_symbols' tool with 'ld-<platform>.lib.so' used as argument.
+# However, this tool was solely used as a starting point for the - now
+# manually maintained - file.
+#
+# Note that not all symbols present in this list are provided by each variant
+# of the dynamic linker. I.e., there are a few symbols that are specific for a
+# particular kernel or the C++ ABI of a specific architecture.
+#
+# Please keep the file sorted via 'LC_COLLATE=C sort'.
+#
+
+#
+# Copyright (C) 2016 Genode Labs GmbH
+#
+# This file is part of the Genode OS framework, which is distributed
+# under the terms of the GNU General Public License version 2.
+#
+
 _Unwind_Complete T
 _Unwind_DeleteException T
 _Unwind_Resume T
