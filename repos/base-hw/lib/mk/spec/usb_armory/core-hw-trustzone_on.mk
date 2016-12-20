@@ -8,4 +8,4 @@
 INC_DIR += $(REP_DIR)/src/core/include/spec/usb_armory
 
 # include less specific configuration
-include $(REP_DIR)/lib/mk/spec/imx53/core-trustzone_on.inc
+include $(REP_DIR)/lib/mk/spec/imx53/core-hw-trustzone_on.inc
