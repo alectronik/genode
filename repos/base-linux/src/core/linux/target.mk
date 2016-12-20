@@ -1,6 +1,6 @@
 TARGET        = core-linux
 REQUIRES      = linux
-LIBS          = cxx base-linux-common syscall-linux startup
+LIBS          = cxx base-linux-common syscall-linux startup-linux
 
 GEN_CORE_DIR  = $(BASE_DIR)/src/core
 
