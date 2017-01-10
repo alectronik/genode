@@ -145,6 +145,7 @@ _ZN6Genode15Signal_receiverC1Ev T
 _ZN6Genode15Signal_receiverC2Ev T
 _ZN6Genode15Signal_receiverD1Ev T
 _ZN6Genode15Signal_receiverD2Ev T
+_ZN6Genode15Timed_semaphore4downEm T
 _ZN6Genode16raw_write_stringEPKc T
 _ZN6Genode17Native_capability4_decEv T
 _ZN6Genode17Native_capability4_incEv T
