@@ -49,7 +49,7 @@ Our principle direction as declared at he beginning of 2016 remains unchanged
 for 2017: Making Genode accessible to the world outside the inner circle
 of us enthusiasts. But rather than making this direction the top priority for
 now, let us first push the bounds of what the current users and
-developers can to with Genode. Hence, for the overall theme of 2017, we
+developers can do with Genode. Hence, for the overall theme of 2017, we
 picked: *stability and scalability*. Once Genode reaches the point where it is
 routinely used and stressed for various purposes by the "inner circle", a
 growing user base will follow naturally and organically.
@@ -73,7 +73,7 @@ following topics to address in 2017:
   Until now, Genode subsystems were either static (using the init component to
   define them) or relied on a scenario-specific dynamic runtime environment
   (like CLI monitor). By enhancing init to dynamically apply configuration
-  changes, the need for special-purpose dynamic runtime environments will
+  changes, the need for special-purpose runtime environments will
   disappear. Scenarios like multi-stage booting, boot-medium detection, or
   a dynamic desktop environment will become dramatically easier to realize.
 
