@@ -8,6 +8,8 @@
  * This header is scheduled for removal. It exists for API compatiblity only.
  */
 
+#warning cap_session/cap_session.h is deprecated
+
 /*
  * Copyright (C) 2006-2013 Genode Labs GmbH
  *
