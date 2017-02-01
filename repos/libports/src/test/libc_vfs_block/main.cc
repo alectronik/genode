@@ -14,12 +14,14 @@
 /* Genode includes */
 #include <libc/component.h>
 #include <base/attached_rom_dataspace.h>
+#include <timer_session/connection.h>
 
 /* libc includes */
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 namespace Test {
 	class Buffer;
@@ -222,11 +224,29 @@ struct Test::Main
 	 */
 	void _exec_sequences(Genode::Xml_node config);
 
+	Timer::Connection _timer { _env };
+
+	void _handle_timer()
+	{
+		int ret = Libc::with_libc([&] () {
+			return ::printf("This code should run in the libc app context.\n");
+		});
+
+		Genode::log("printf returned ", ret);
+	}
+
+	Genode::Signal_handler<Main> _timer_handler {
+		_env.ep(), *this, &Main::_handle_timer };
+
 	/*
 	 * \throw Step_failed
 	 */
 	Main(Genode::Env &env) : _env(env)
 	{
+		/* call '_handle_timer' every second */
+		_timer.sigh(_timer_handler);
+		_timer.trigger_periodic(1000*1000);
+
 		_exec_sequences(_config.xml());
 		_env.parent().exit(0);
 	}

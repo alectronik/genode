@@ -8,7 +8,7 @@
 # Build
 #
 
-build { core init server/ram_blk test/libc_vfs_block }
+build { core init drivers/timer server/ram_blk test/libc_vfs_block }
 
 create_boot_directory
 
@@ -29,6 +29,10 @@ set config {
 	<default-route>
 		<any-service> <parent/> <any-child/> </any-service>
 	</default-route>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>
 	<start name="ram_blk">
 		<resource name="RAM" quantum="2M"/>
 		<provides> <service name="Block"/> </provides>
@@ -37,8 +41,8 @@ set config {
 	<start name="test-libc_vfs_block">
 		<resource name="RAM" quantum="2M"/>
 		<config>
-			<vfs> <dir name="dev"> <block/> </dir> </vfs>
-			<libc/>
+			<vfs> <dir name="dev"> <block/> <log/> </dir> </vfs>
+			<libc stdout="/dev/log"/>
 
 			<!-- Populate the block device with a pattern and validate the
 			     write operation by reading back the content. -->
@@ -73,7 +77,7 @@ install_config $config
 #
 
 build_boot_image {
-	core init
+	core init timer
 	ld.lib.so libc.lib.so libm.lib.so
 	ram_blk test-libc_vfs_block
 }
@@ -83,5 +87,7 @@ build_boot_image {
 #
 
 append qemu_args " -m 128 -nographic "
+
+run_genode_until forever
 run_genode_until {.*child "test-libc_vfs_block" exited with exit value 0.*} 60
 
