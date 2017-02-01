@@ -21,50 +21,95 @@
 #ifndef _INCLUDE__LIBC__COMPONENT_H_
 #define _INCLUDE__LIBC__COMPONENT_H_
 
+#include <util/meta.h>
 #include <vfs/file_system.h>
 #include <base/env.h>
 #include <base/stdint.h>
+
+namespace Libc { class Env; }
 
 
 /**
  * Interface to be provided by the component implementation
  */
+class Libc::Env : public Genode::Env
+{
+	private:
+
+		virtual Genode::Xml_node _config_xml() const = 0;
+
+	public:
+
+		/**
+		 * Component configuration
+		 */
+		template <typename FUNC>
+		void config(FUNC const &func) const {
+			func(_config_xml()); }
+
+		/**
+		 * Virtual File System configured for this component
+		 */
+		virtual Vfs::File_system &vfs() = 0;
+};
+
+
+namespace Libc { namespace Component {
+
+	/**
+	 * Return stack size of the component's initial entrypoint
+	 */
+	Genode::size_t stack_size();
+
+	/**
+	 * Construct component
+	 *
+	 * \param env  extended interface to the component's execution environment
+	 */
+	void construct(Libc::Env &env);
+} }
+
+
 namespace Libc {
 
-	class Env : public Genode::Env
+	struct Application_code { virtual void execute() = 0; };
+
+	void execute_in_application_context(Application_code &);
+
+	/**
+	 * Execute 'FUNC' lambda in the libc application context
+	 *
+	 * In order to invoke the libc's I/O functions (in particular 'select',
+	 * 'read', 'write', or other functions like 'socket' that indirectly call
+	 * them), the libc-calling application code must be executed under the
+	 * supervision of the libc runtime. This is not the case for signal
+	 * handlers or RPC functions that are executed in the context of the
+	 * 'Genode::Entrypoint'. The 'with_libc' function allows such handlers to
+	 * interact with the libc by deliberately subjecting the specified function
+	 * ('func') to the libc runtime.
+	 */
+	template <typename FUNC>
+	auto with_libc(FUNC const &func)
+	-> typename Genode::Trait::Functor<decltype(&FUNC::operator())>::Return_type
 	{
-		private:
+		using Functor     = Genode::Trait::Functor<decltype(&FUNC::operator())>;
+		using Return_type = typename Functor::Return_type;
 
-			virtual Genode::Xml_node _config_xml() const = 0;
-
-		public:
-
-			/**
-			 * Component configuration
-			 */
-			template <typename FUNC>
-			void config(FUNC const &func) const {
-				func(_config_xml()); }
-
-			/**
-			 * Virtual File System configured for this component
-			 */
-			virtual Vfs::File_system &vfs() = 0;
-	};
-
-	namespace Component {
-
-		/**
-		 * Return stack size of the component's initial entrypoint
+		/*
+		 * Implementation of the 'Application_code' interface that executes
+		 * the code in the 'func' lambda.
 		 */
-		Genode::size_t stack_size();
+		struct Application_code_func : Application_code
+		{
+			FUNC const &func;
+			Return_type retval;
+			void execute() override { retval = func(); }
+			Application_code_func(FUNC const &func) : func(func) { }
+		} application_code_func { func };
 
-		/**
-		 * Construct component
-		 *
-		 * \param env  extended interface to the component's execution environment
-		 */
-		void construct(Libc::Env &env);
+		execute_in_application_context(application_code_func);
+
+		return application_code_func.retval;
 	}
 }
 
