@@ -1,0 +1,31 @@
+This component transforms input events originating from multiple sources.
+
+
+<config>
+  <input name="ps2" label="ps2"/>
+  <input name="usb" label="usb"/>
+  <output>
+    <chargen>
+      <remap>
+        <merge>
+          <input name="ps2"/>
+          <input name="usb"/>
+        </merge>
+        <key name="KEY_ESC" to="KEY_CAPSLOCK"/>
+        <key name="KEY_CAPSLOCK" to="KEY_ESC"/>
+      </remap>
+      <mod1>
+        <key name="KEY_LEFTSHIFT"/>
+        <key name="KEY_RIGHTSHIFT"/>
+        <key name="KEY_CAPSLOCK" sticky="yes"/>
+      </mod1>
+      <mod2>
+        <key name="KEY_LEFTCTRL"/>
+        <key name="KEY_RIGHTCTRL"/>
+        <key name="KEY_Z"/>
+      </mod2>
+      <repeat delay_ms="500" rate_ms="250"/>
+      <include rom="us_en.chargen"/>
+    </chargen>
+  </output>
+</config>
