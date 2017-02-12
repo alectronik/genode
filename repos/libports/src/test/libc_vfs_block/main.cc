@@ -233,6 +233,12 @@ struct Test::Main
 		});
 
 		Genode::log("printf returned ", ret);
+
+		Libc::with_libc([&] () {
+			::printf("This code should also run in the libc app context.\n");
+		});
+
+		Genode::log("printf returned");
 	}
 
 	Genode::Signal_handler<Main> _timer_handler {
