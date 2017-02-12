@@ -72,7 +72,23 @@ namespace Libc { namespace Component {
 
 namespace Libc {
 
-	struct Application_code { virtual void execute() = 0; };
+	class Application_code {
+
+		protected:
+
+			/*
+			 * Helper to distinguish void from non-void return type
+			 */
+			template <typename FUNC, typename RET>
+			void _execute(RET &ret_out, FUNC const &func) { ret_out = func(); }
+
+			template <typename FUNC>
+			void _execute(Genode::Meta::Empty &, FUNC const &func) { func(); }
+
+		public:
+
+			virtual void execute() = 0;
+	};
 
 	void execute_in_application_context(Application_code &);
 
@@ -90,10 +106,12 @@ namespace Libc {
 	 */
 	template <typename FUNC>
 	auto with_libc(FUNC const &func)
-	-> typename Genode::Trait::Functor<decltype(&FUNC::operator())>::Return_type
+	-> typename Genode::Trait::Call_return
+	       <typename Genode::Trait::Functor
+	            <decltype(&FUNC::operator())>::Return_type>::Type
 	{
 		using Functor     = Genode::Trait::Functor<decltype(&FUNC::operator())>;
-		using Return_type = typename Functor::Return_type;
+		using Return_type = typename Genode::Trait::Call_return<typename Functor::Return_type>::Type;
 
 		/*
 		 * Implementation of the 'Application_code' interface that executes
@@ -103,7 +121,7 @@ namespace Libc {
 		{
 			FUNC const &func;
 			Return_type retval;
-			void execute() override { retval = func(); }
+			void execute() override { _execute(retval, func); }
 			Application_code_func(FUNC const &func) : func(func) { }
 		} application_code_func { func };
 
