@@ -974,7 +974,7 @@ class Nitpicker::Session_component : public Genode::Rpc_object<Session>,
 			if (::Session::texture()) {
 
 				enum { PRESERVED_RAM = 128*1024 };
-				if (_env.ram().avail() > _buffer_size + PRESERVED_RAM) {
+				if (_env.ram().avail_ram().value > _buffer_size + PRESERVED_RAM) {
 					src_texture = static_cast<Texture<PT> const *>(::Session::texture());
 				} else {
 					Genode::warning("not enough RAM to preserve buffer content during resize");
@@ -1039,7 +1039,7 @@ class Nitpicker::Root : public Genode::Root_component<Session_component>
 			if (ram_quota < required_quota) {
 				Genode::warning("Insufficient dontated ram_quota (", ram_quota,
 				                " bytes), require ", required_quota, " bytes");
-				throw Root::Quota_exceeded();
+				throw Genode::Insufficient_ram_quota();
 			}
 
 			size_t const unused_quota = ram_quota - required_quota;

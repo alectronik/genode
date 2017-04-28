@@ -173,7 +173,7 @@ proc platform_drv_config {} {
 	if {[have_platform_drv]} {
 
 		append drv_config "
-	<start name=\"platform_drv\" [platform_drv_priority]>"
+	<start name=\"platform_drv\" [platform_drv_priority] caps=\"300\">"
 
 		append drv_config {
 		<resource name="RAM" quantum="4M" constrain_phys="yes"/>

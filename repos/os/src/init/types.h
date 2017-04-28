@@ -16,6 +16,7 @@
 
 #include <util/string.h>
 #include <util/list.h>
+#include <session/session.h>
 
 namespace Init {
 
@@ -24,8 +25,6 @@ namespace Init {
 	using namespace Genode;
 	using Genode::size_t;
 	using Genode::strlen;
-
-	struct Ram_quota { size_t value; };
 
 	struct Prio_levels { long value; };
 

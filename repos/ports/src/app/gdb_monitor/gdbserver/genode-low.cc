@@ -467,7 +467,18 @@ extern "C" int fork()
 		return -1;
 	}
 
-	Number_of_bytes ram_quota = genode_env->ram().avail() - preserved_ram_quota;
+	Number_of_bytes ram_quota = genode_env->ram().avail_ram().value - preserved_ram_quota;
+
+	Cap_quota const avail_cap_quota = genode_env->pd().avail_caps();
+
+	Genode::size_t const preserved_caps = 100;
+
+	if (avail_cap_quota.value < preserved_caps) {
+		error("not enough available caps for preservation of ", preserved_caps);
+		return -1;
+	}
+
+	Cap_quota const cap_quota { avail_cap_quota.value - preserved_caps };
 
 	/* start the application */
 
@@ -482,7 +493,8 @@ extern "C" int fork()
 	App_child *child = new (alloc) App_child(*genode_env,
 	                                         alloc,
 	                                         filename,
-	                                         ram_quota,
+	                                         Ram_quota{ram_quota},
+	                                         cap_quota,
 	                                         signal_receiver,
 	                                         target_node);
 

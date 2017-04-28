@@ -92,10 +92,13 @@ struct Genode::Env
 	 * \param args             session constructor arguments
 	 * \param affinity         preferred CPU affinity for the session
 	 *
-	 * \throw Service_denied   parent denies session request
-	 * \throw Quota_exceeded   our own quota does not suffice for
-	 *                         the creation of the new session
-	 * \throw Unavailable
+	 * \throw Service_denied
+	 * \throw Insufficient_cap_quota
+	 * \throw Insufficient_ram_quota
+	 * \throw Out_of_caps
+	 * \throw Out_of_ram
+	 *
+	 * See the documentation of 'Parent::session'.
 	 *
 	 * This method blocks until the session is available or an error
 	 * occurred.
@@ -116,7 +119,10 @@ struct Genode::Env
 	 * \param id    ID of recipient session
 	 * \param args  description of the amount of quota to transfer
 	 *
-	 * \throw Quota_exceeded  quota could not be transferred
+	 * \throw Out_of_ram
+	 * \throw Out_of_caps
+	 *
+	 * See the documentation of 'Parent::upgrade'.
 	 *
 	 * The 'args' argument has the same principle format as the 'args'
 	 * argument of the 'session' operation.
@@ -136,7 +142,7 @@ struct Genode::Env
 	 * constructors in the binary and shared libraries the binary depends on. If
 	 * the component requires static construction it needs to call this function
 	 * at construction time explicitly. For example, the libc implementation
-         * executes this function before constructing libc components.
+	 * executes this function before constructing libc components.
 	 */
 	virtual void exec_static_constructors() = 0;
 };

@@ -198,9 +198,9 @@ void Init::Child::apply_ram_upgrade()
 		_resources.assigned_ram_quota =
 			Ram_quota { _resources.assigned_ram_quota.value + transfer };
 
-		_check_resource_constraints(_ram_limit_accessor.ram_limit());
+		_check_ram_constraints(_ram_limit_accessor.ram_limit());
 
-		ref_ram().transfer_quota(_child.ram_session_cap(), transfer);
+		ref_ram().transfer_quota(_child.ram_session_cap(), Ram_quota{transfer});
 
 		/* wake up child that blocks on a resource request */
 		if (_requested_resources.constructed()) {
@@ -231,18 +231,19 @@ void Init::Child::apply_ram_downgrade()
 
 		/* give up if the child's available RAM is exhausted */
 		size_t const preserved = 16*1024;
-		size_t const avail     = _child.ram().avail();
+		size_t const avail     = _child.ram().avail_ram().value;
 
 		if (avail < preserved)
 			break;
 
 		size_t const transfer = min(avail - preserved, decrease);
 
-		if (_child.ram().transfer_quota(ref_ram_cap(), transfer) == 0) {
+		try {
+			_child.ram().transfer_quota(ref_ram_cap(), Ram_quota{transfer});
 			_resources.assigned_ram_quota =
 				Ram_quota { _resources.assigned_ram_quota.value - transfer };
 			break;
-		}
+		} catch (...) { }
 	}
 
 	if (attempts == max_attempts)
@@ -286,16 +287,22 @@ void Init::Child::report_state(Xml_generator &xml, Report_detail const &detail) 
 				xml.attribute("assigned", String<32> {
 					Number_of_bytes(_resources.assigned_ram_quota.value) });
 
-				/*
-				 * The const cast is needed because there is no const
-				 * accessor for the RAM session of the child.
-				 */
-				auto &nonconst_child = const_cast<Genode::Child &>(_child);
-				generate_ram_info(xml, nonconst_child.ram());
+				generate_ram_info(xml, _child.ram());
 
-				if (_requested_resources.constructed())
-					xml.attribute("requested", String<32> {
-						Number_of_bytes(_requested_resources->ram.value) });
+				if (_requested_resources.constructed() && _requested_resources->ram.value)
+					xml.attribute("requested", String<32>(_requested_resources->ram));
+			});
+		}
+
+		if (detail.child_caps() && _child.pd_session_cap().valid()) {
+			xml.node("caps", [&] () {
+
+				xml.attribute("assigned", String<32>(_resources.assigned_cap_quota));
+
+				generate_caps_info(xml, _child.pd());
+
+				if (_requested_resources.constructed() && _requested_resources->caps.value)
+					xml.attribute("requested", String<32>(_requested_resources->caps));
 			});
 		}
 
@@ -324,6 +331,18 @@ void Init::Child::report_state(Xml_generator &xml, Report_detail const &detail) 
 }
 
 
+void Init::Child::init(Pd_session &session, Pd_session_capability cap)
+{
+	session.ref_account(_env.pd_session_cap());
+
+	Cap_quota const quota { _resources.effective_cap_quota().value };
+
+	try { _env.pd().transfer_quota(cap, quota); }
+	catch (Out_of_caps) {
+		error(name(), ": unable to initialize cap quota of PD"); }
+}
+
+
 void Init::Child::init(Ram_session &session, Ram_session_capability cap)
 {
 	session.ref_account(_env.ram_session_cap());
@@ -335,7 +354,7 @@ void Init::Child::init(Ram_session &session, Ram_session_capability cap)
 	                          ? _resources.effective_ram_quota().value - initial_session_costs
 	                          : 0;
 	if (transfer_ram)
-		_env.ram().transfer_quota(cap, transfer_ram);
+		_env.ram().transfer_quota(cap, Ram_quota{transfer_ram});
 }
 
 
@@ -445,12 +464,15 @@ Init::Child::Route Init::Child::resolve_session_request(Service::Name const &ser
 				Label const target_label =
 					target.attribute_value("label", Label(label.string()));
 
+				Session::Diag const
+					target_diag { target.attribute_value("diag", false) };
+
 				if (target.has_type("parent")) {
 
 					Parent_service *service = nullptr;
 
 					if ((service = find_service(_parent_services, service_name)))
-						return Route { *service, target_label };
+						return Route { *service, target_label, target_diag };
 
 					if (service && service->abandoned())
 						throw Parent::Service_denied();
@@ -479,7 +501,7 @@ Init::Child::Route Init::Child::resolve_session_request(Service::Name const &ser
 						throw Parent::Service_denied();
 
 					if (service)
-						return Route { *service, target_label };
+						return Route { *service, target_label, target_diag };
 
 					if (!service_wildcard) {
 						warning(name(), ": lookup to child "
@@ -499,7 +521,7 @@ Init::Child::Route Init::Child::resolve_session_request(Service::Name const &ser
 					Routed_service *service = nullptr;
 
 					if ((service = find_service(_child_services, service_name)))
-						return Route { *service, target_label };
+						return Route { *service, target_label, target_diag };
 
 					if (!service_wildcard) {
 						warning(name(), ": lookup for service "
@@ -614,8 +636,10 @@ Init::Child::Child(Env                      &env,
                    Report_update_trigger    &report_update_trigger,
                    Xml_node                  start_node,
                    Default_route_accessor   &default_route_accessor,
+                   Default_caps_accessor    &default_caps_accessor,
                    Name_registry            &name_registry,
                    Ram_quota                 ram_limit,
+                   Cap_quota                 cap_limit,
                    Ram_limit_accessor       &ram_limit_accessor,
                    Prio_levels               prio_levels,
                    Affinity::Space const    &affinity_space,
@@ -629,15 +653,18 @@ Init::Child::Child(Env                      &env,
 	_default_route_accessor(default_route_accessor),
 	_ram_limit_accessor(ram_limit_accessor),
 	_name_registry(name_registry),
-	_resources(_resources_from_start_node(start_node, prio_levels, affinity_space)),
-	_resources_checked((_check_resource_constraints(ram_limit), true)),
+	_resources(_resources_from_start_node(start_node, prio_levels, affinity_space,
+	                                      default_caps_accessor.default_caps(), cap_limit)),
+	_resources_checked((_check_ram_constraints(ram_limit),
+	                    _check_cap_constraints(cap_limit), true)),
 	_parent_services(parent_services),
 	_child_services(child_services),
 	_session_requester(_env.ep().rpc_ep(), _env.ram(), _env.rm())
 {
 	if (_verbose.enabled()) {
 		log("child \"",       _unique_name, "\"");
-		log("  RAM quota:  ", Number_of_bytes(_resources.effective_ram_quota().value));
+		log("  RAM quota:  ", _resources.effective_ram_quota());
+		log("  cap quota:  ", _resources.effective_cap_quota());
 		log("  ELF binary: ", _binary_name);
 		log("  priority:   ", _resources.priority);
 	}

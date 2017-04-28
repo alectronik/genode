@@ -43,27 +43,33 @@ void Ram_session_component::free(Ram_dataspace_capability ds_cap)
 }
 
 
-int Ram_session_component::ref_account(Ram_session_capability ram_session_cap)
+size_t Ram_session_component::dataspace_size(Ram_dataspace_capability ds_cap) const
 {
-	return _parent_ram_session.ref_account(ram_session_cap);
+	return _parent_ram_session.dataspace_size(ds_cap);
 }
 
 
-int Ram_session_component::transfer_quota(Ram_session_capability ram_session_cap,
-                                          size_t amount)
+void Ram_session_component::ref_account(Ram_session_capability ram_session_cap)
 {
-	return _parent_ram_session.transfer_quota(ram_session_cap, amount);
+	_parent_ram_session.ref_account(ram_session_cap);
 }
 
 
-size_t Ram_session_component::quota()
+void Ram_session_component::transfer_quota(Ram_session_capability ram_session_cap,
+                                           Ram_quota amount)
 {
-	return _parent_ram_session.quota();
+	_parent_ram_session.transfer_quota(ram_session_cap, amount);
 }
 
 
-size_t Ram_session_component::used()
+Ram_quota Ram_session_component::ram_quota() const
 {
-	return _parent_ram_session.used();
+	return _parent_ram_session.ram_quota();
+}
+
+
+Ram_quota Ram_session_component::used_ram() const
+{
+	return _parent_ram_session.used_ram();
 }
 

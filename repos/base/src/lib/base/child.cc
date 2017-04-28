@@ -12,79 +12,9 @@
  */
 
 #include <base/child.h>
+#include <base/quota_transfer.h>
 
 using namespace Genode;
-
-
-/***************
- ** Utilities **
- ***************/
-
-namespace {
-
-		/**
-		 * Guard for transferring quota donation
-		 *
-		 * This class is used to provide transactional semantics of quota
-		 * transfers. Establishing a new session involves several steps, in
-		 * particular subsequent quota transfers. If one intermediate step
-		 * fails, we need to revert all quota transfers that already took
-		 * place. When instantated at a local scope, a 'Transfer' object guards
-		 * a quota transfer. If the scope is left without prior an explicit
-		 * acknowledgement of the transfer (for example via an exception), the
-		 * destructor the 'Transfer' object reverts the transfer in flight.
-		 */
-		class Transfer {
-
-			bool                   _ack;
-			size_t                 _quantum;
-			Ram_session_capability _from;
-			Ram_session_capability _to;
-
-			public:
-
-				class Quota_exceeded : Exception { };
-
-				/**
-				 * Constructor
-				 *
-				 * \param quantim  number of bytes to transfer
-				 * \param from     donator RAM session
-				 * \param to       receiver RAM session
-				 *
-				 * \throw Quota_exceeded
-				 */
-				Transfer(size_t quantum,
-				         Ram_session_capability from,
-				         Ram_session_capability to)
-				: _ack(false), _quantum(quantum), _from(from), _to(to)
-				{
-					if (_from.valid() && _to.valid() &&
-					    Ram_session_client(_from).transfer_quota(_to, quantum)) {
-						warning("not enough quota for a donation of ", quantum, " bytes");
-						throw Quota_exceeded();
-					}
-				}
-
-				/**
-				 * Destructor
-				 *
-				 * The destructor will be called when leaving the scope of the
-				 * 'session' function. If the scope is left because of an error
-				 * (e.g., an exception), the donation will be reverted.
-				 */
-				~Transfer()
-				{
-					if (!_ack && _from.valid() && _to.valid())
-						Ram_session_client(_to).transfer_quota(_from, _quantum);
-				}
-
-				/**
-				 * Acknowledge quota donation
-				 */
-				void acknowledge() { _ack = true; }
-		};
-}
 
 
 /***********
@@ -144,7 +74,8 @@ void Child::session_sigh(Signal_context_capability sigh)
 	_id_space.for_each<Session_state const>([&] (Session_state const &session) {
 
 		if (session.phase == Session_state::AVAILABLE ||
-		    session.phase == Session_state::QUOTA_EXCEEDED ||
+		    session.phase == Session_state::INSUFFICIENT_RAM_QUOTA ||
+		    session.phase == Session_state::INSUFFICIENT_CAP_QUOTA ||
 		    session.phase == Session_state::INVALID_ARGS) {
 
 			if (sigh.valid() && session.async_client_notify)
@@ -157,7 +88,9 @@ void Child::session_sigh(Signal_context_capability sigh)
 /**
  * Create session-state object for a dynamically created session
  *
- * \throw Parent::Quota_exceeded
+ * \throw Out_of_ram
+ * \throw Insufficient_cap_quota
+ * \throw Insufficient_ram_quota
  * \throw Parent::Service_denied
  */
 Session_state &
@@ -168,16 +101,20 @@ create_session(Child_policy::Name const &child_name, Service &service,
                Affinity const &affinity)
 {
 	try {
-		return service.create_session(factory, id_space, id, label, args, affinity);
-	}
-	catch (Service::Quota_exceeded) {
-		error(child_name, " requested session with insufficient session quota");
-		throw Parent::Quota_exceeded();
-	}
+		return service.create_session(factory, id_space, id, label, args, affinity); }
+
+	catch (Insufficient_ram_quota) {
+		error(child_name, " requested session with insufficient RAM quota");
+		throw; }
+
+	catch (Insufficient_cap_quota) {
+		error(child_name, " requested session with insufficient cap quota");
+		throw; }
+
 	catch (Allocator::Out_of_memory) {
-		error("could not allocate session meta data for child ", child_name);
-		throw Parent::Quota_exceeded();
-	}
+		error(child_name, " session meta data could not be allocated");
+		throw Out_of_ram(); }
+
 	catch (Id_space<Parent::Client>::Conflicting_id) {
 
 		error(child_name, " requested conflicting session ID ", id, " "
@@ -209,8 +146,8 @@ Child_policy::Route Child::_resolve_session_request(Child_policy &policy,
 	try {
 
 		Session_state::Args args(argbuf);
-		return Child_policy::Route {
-			policy.resolve_session_request(name, args), label };
+		return { policy.resolve_session_request(name, args), label,
+		         session_diag_from_args(argbuf) };
 	}
 	catch (Parent::Service_denied) { }
 
@@ -240,28 +177,31 @@ Session_capability Child::session(Parent::Client::Id id,
 	/* filter session affinity */
 	Affinity const filtered_affinity = _policy.filter_session_affinity(affinity);
 
-	size_t const ram_quota = Arg_string::find_arg(argbuf, "ram_quota").ulong_value(0);
+	Cap_quota const cap_quota = cap_quota_from_args(argbuf);
+	Ram_quota const ram_quota = ram_quota_from_args(argbuf);
 
 	/* portion of quota to keep for ourself to maintain the session meta data */
 	size_t const keep_ram_quota = _session_factory.session_costs();
 
-	if (ram_quota < keep_ram_quota)
-		throw Parent::Quota_exceeded();
+	if (ram_quota.value < keep_ram_quota)
+		throw Insufficient_ram_quota();
 
 	/* ram quota to be forwarded to the server */
-	size_t const forward_ram_quota = ram_quota - keep_ram_quota;
+	Ram_quota const forward_ram_quota { ram_quota.value - keep_ram_quota };
 
 	/* adjust the session information as presented to the server */
-	Arg_string::set_arg(argbuf, sizeof(argbuf), "ram_quota",
-	                    forward_ram_quota);
+	Arg_string::set_arg(argbuf, sizeof(argbuf), "ram_quota", forward_ram_quota.value);
 
 	/* may throw a 'Parent::Service_denied' exception */
 	Child_policy::Route route = _resolve_session_request(_policy, name.string(), argbuf);
 	Service &service = route.service;
 
+	/* propagate diag flag */
+	Arg_string::set_arg(argbuf, sizeof(argbuf), "diag", route.diag.enabled);
+
 	Session_state &session =
-		create_session(_policy.name(), service, route.label, _session_factory,
-		               _id_space, id, argbuf, filtered_affinity);
+		create_session(_policy.name(), service, route.label,
+		               _session_factory, _id_space, id, argbuf, filtered_affinity);
 
 	_policy.session_state_changed();
 
@@ -270,11 +210,18 @@ Session_capability Child::session(Parent::Client::Id id,
 
 	try {
 		/* transfer the quota donation from the child's account to ourself */
-		Transfer donation_from_child(ram_quota, _ram.cap(), _policy.ref_ram_cap());
+		Ram_transfer::Local_account ref_ram_account { _policy.ref_ram(), _policy.ref_ram_cap() };
+		Cap_transfer::Local_account ref_cap_account { _policy.ref_pd(),  _policy.ref_pd_cap()  };
+
+		Ram_transfer::Local_account ram_account { ram(), ram_session_cap() };
+		Cap_transfer::Local_account cap_account { pd(),  pd_session_cap() };
+
+		Ram_transfer ram_donation_from_child(ram_quota, ram_account, ref_ram_account);
+		Cap_transfer cap_donation_from_child(cap_quota, cap_account, ref_cap_account);
 
 		/* transfer session quota from ourself to the service provider */
-		Transfer donation_to_service(forward_ram_quota, _policy.ref_ram_cap(),
-		                             service.ram());
+		Ram_transfer ram_donation_to_service(forward_ram_quota, ref_ram_account, service);
+		Cap_transfer cap_donation_to_service(cap_quota,         ref_cap_account, service);
 
 		/* try to dispatch session request synchronously */
 		service.initiate_request(session);
@@ -284,21 +231,32 @@ Session_capability Child::session(Parent::Client::Id id,
 			throw Service_denied();
 		}
 
-		if (session.phase == Session_state::QUOTA_EXCEEDED) {
+		if (session.phase == Session_state::INSUFFICIENT_RAM_QUOTA) {
 			_revert_quota_and_destroy(session);
-			throw Parent::Quota_exceeded();
+			throw Insufficient_ram_quota();
+		}
+
+		if (session.phase == Session_state::INSUFFICIENT_CAP_QUOTA) {
+			_revert_quota_and_destroy(session);
+			throw Insufficient_cap_quota();
 		}
 
 		/* finish transaction */
-		donation_from_child.acknowledge();
-		donation_to_service.acknowledge();
+		ram_donation_from_child.acknowledge();
+		cap_donation_from_child.acknowledge();
+		ram_donation_to_service.acknowledge();
+		cap_donation_to_service.acknowledge();
 	}
-	catch (Transfer::Quota_exceeded) {
-		/*
-		 * Release session meta data if one of the quota transfers went wrong.
-		 */
+	/*
+	 * Release session meta data if one of the quota transfers went wrong.
+	 */
+	catch (Ram_transfer::Quota_exceeded) {
 		session.destroy();
-		throw Parent::Quota_exceeded();
+		throw Out_of_ram();
+	}
+	catch (Cap_transfer::Quota_exceeded) {
+		session.destroy();
+		throw Out_of_caps();
 	}
 
 	/*
@@ -327,7 +285,8 @@ Session_capability Child::session_cap(Client::Id id)
 	auto lamda = [&] (Session_state &session) {
 
 		if (session.phase == Session_state::INVALID_ARGS
-		 || session.phase == Session_state::QUOTA_EXCEEDED) {
+		 || session.phase == Session_state::INSUFFICIENT_RAM_QUOTA
+		 || session.phase == Session_state::INSUFFICIENT_CAP_QUOTA) {
 
 			Session_state::Phase const phase = session.phase;
 
@@ -338,10 +297,12 @@ Session_capability Child::session_cap(Client::Id id)
 			 */
 			_revert_quota_and_destroy(session);
 
-			if (phase == Session_state::INVALID_ARGS)
-				throw Parent::Service_denied();
-			else
-				throw Parent::Quota_exceeded();
+			switch (phase) {
+			case Session_state::INVALID_ARGS:           throw Parent::Service_denied();
+			case Session_state::INSUFFICIENT_RAM_QUOTA: throw Insufficient_ram_quota();
+			case Session_state::INSUFFICIENT_CAP_QUOTA: throw Insufficient_cap_quota();
+			default: break;
+			}
 		}
 
 		if (!session.alive())
@@ -380,29 +341,45 @@ Parent::Upgrade_result Child::upgrade(Client::Id id, Parent::Upgrade_args const 
 			return;
 		}
 
-		size_t const ram_quota =
-			Arg_string::find_arg(args.string(), "ram_quota").ulong_value(0);
+		Ram_quota const ram_quota {
+			Arg_string::find_arg(args.string(), "ram_quota").ulong_value(0) };
+
+		Cap_quota const cap_quota {
+			Arg_string::find_arg(args.string(), "cap_quota").ulong_value(0) };
 
 		try {
 			/* transfer quota from client to ourself */
-			Transfer donation_from_child(ram_quota, _ram.cap(), _policy.ref_ram_cap());
+			Ram_transfer::Local_account ref_ram_account { _policy.ref_ram(), _policy.ref_ram_cap() };
+			Cap_transfer::Local_account ref_cap_account { _policy.ref_pd(),  _policy.ref_pd_cap()  };
+
+			Ram_transfer::Local_account ram_account { ram(), ram_session_cap() };
+			Cap_transfer::Local_account cap_account { pd(),  pd_session_cap() };
+
+			Ram_transfer ram_donation_from_child(ram_quota, ram_account, ref_ram_account);
+			Cap_transfer cap_donation_from_child(cap_quota, cap_account, ref_cap_account);
 
 			/* transfer session quota from ourself to the service provider */
-			Transfer donation_to_service(ram_quota, _policy.ref_ram_cap(),
-			                             session.service().ram());
+			Ram_transfer ram_donation_to_service(ram_quota, ref_ram_account, session.service());
+			Cap_transfer cap_donation_to_service(cap_quota, ref_cap_account, session.service());
 
-			session.increase_donated_quota(ram_quota);
+			session.increase_donated_quota(ram_quota, cap_quota);
 			session.phase = Session_state::UPGRADE_REQUESTED;
 
 			session.service().initiate_request(session);
 
 			/* finish transaction */
-			donation_from_child.acknowledge();
-			donation_to_service.acknowledge();
+			ram_donation_from_child.acknowledge();
+			cap_donation_from_child.acknowledge();
+			ram_donation_to_service.acknowledge();
+			cap_donation_to_service.acknowledge();
 		}
-		catch (Transfer::Quota_exceeded) {
-			warning(_policy.name(), ": upgrade of ", session.service().name(), " failed");
-			throw Parent::Quota_exceeded();
+		catch (Ram_transfer::Quota_exceeded) {
+			warning(_policy.name(), ": RAM upgrade of ", session.service().name(), " failed");
+			throw Out_of_ram();
+		}
+		catch (Cap_transfer::Quota_exceeded) {
+			warning(_policy.name(), ": cap upgrade of ", session.service().name(), " failed");
+			throw Out_of_caps();
 		}
 
 		if (session.phase == Session_state::CAP_HANDED_OUT) {
@@ -420,10 +397,21 @@ Parent::Upgrade_result Child::upgrade(Client::Id id, Parent::Upgrade_args const 
 
 void Child::_revert_quota_and_destroy(Session_state &session)
 {
+	Ram_transfer::Local_account   ref_ram_account(_policy.ref_ram(), _policy.ref_ram_cap());
+	Ram_transfer::Account    &service_ram_account = session.service();
+	Ram_transfer::Local_account child_ram_account(ram(), ram_session_cap());
+
+	Cap_transfer::Local_account   ref_cap_account(_policy.ref_pd(), _policy.ref_pd_cap());
+	Cap_transfer::Account    &service_cap_account = session.service();
+	Cap_transfer::Local_account child_cap_account(pd(), pd_session_cap());
+
 	try {
 		/* transfer session quota from the service to ourself */
-		Transfer donation_from_service(session.donated_ram_quota(),
-		                               session.service().ram(), _policy.ref_ram_cap());
+		Ram_transfer ram_donation_from_service(session.donated_ram_quota(),
+		                                       service_ram_account, ref_ram_account);
+
+		Cap_transfer cap_donation_from_service(session.donated_cap_quota(),
+		                                       service_cap_account, ref_cap_account);
 
 		/*
 		 * Transfer session quota from ourself to the client (our child). In
@@ -431,15 +419,24 @@ void Child::_revert_quota_and_destroy(Session_state &session)
 		 * quota that we preserved for locally storing the session meta data
 		 * ('session_costs').
 		 */
-		Transfer donation_to_client(session.donated_ram_quota() +
-		                            _session_factory.session_costs(),
-		                            _policy.ref_ram_cap(), ram_session_cap());
+		Ram_quota const returned_ram { session.donated_ram_quota().value +
+		                               _session_factory.session_costs() };
+
+		Ram_transfer ram_donation_to_client(returned_ram,
+		                                    ref_ram_account, child_ram_account);
+		Cap_transfer cap_donation_to_client(session.donated_cap_quota(),
+		                                    ref_cap_account, child_cap_account);
+
 		/* finish transaction */
-		donation_from_service.acknowledge();
-		donation_to_client.acknowledge();
+		ram_donation_from_service.acknowledge();
+		cap_donation_from_service.acknowledge();
+		ram_donation_to_client.acknowledge();
+		cap_donation_to_client.acknowledge();
 	}
-	catch (Transfer::Quota_exceeded) {
-		warning(_policy.name(), ": could not revert session quota (", session, ")"); }
+	catch (Ram_transfer::Quota_exceeded) {
+		warning(_policy.name(), ": could not revert session RAM quota (", session, ")"); }
+	catch (Cap_transfer::Quota_exceeded) {
+		warning(_policy.name(), ": could not revert session cap quota (", session, ")"); }
 
 	session.destroy();
 	_policy.session_state_changed();
@@ -453,7 +450,8 @@ Child::Close_result Child::_close(Session_state &session)
 	 * without involving the server
 	 */
 	if (session.phase == Session_state::INVALID_ARGS
-	 || session.phase == Session_state::QUOTA_EXCEEDED) {
+	 || session.phase == Session_state::INSUFFICIENT_RAM_QUOTA
+	 || session.phase == Session_state::INSUFFICIENT_CAP_QUOTA) {
 		_revert_quota_and_destroy(session);
 		return CLOSE_DONE;
 	}
@@ -552,8 +550,14 @@ void Child::session_response(Server::Id id, Session_response response)
 					session.ready_callback->session_ready(session);
 				break;
 
-			case Parent::QUOTA_EXCEEDED:
-				session.phase = Session_state::QUOTA_EXCEEDED;
+			case Parent::INSUFFICIENT_RAM_QUOTA:
+				session.phase = Session_state::INSUFFICIENT_RAM_QUOTA;
+				if (session.ready_callback)
+					session.ready_callback->session_ready(session);
+				break;
+
+			case Parent::INSUFFICIENT_CAP_QUOTA:
+				session.phase = Session_state::INSUFFICIENT_CAP_QUOTA;
 				if (session.ready_callback)
 					session.ready_callback->session_ready(session);
 				break;
@@ -703,7 +707,8 @@ void Child::_try_construct_env_dependent_members()
 		                   Child_address_space(_pd.session(), _policy).region_map(),
 		                   _parent_cap);
 	}
-	catch (Ram_session::Alloc_failed)           { _error("RAM allocation failed during ELF loading"); }
+	catch (Out_of_ram)                          { _error("out of RAM during ELF loading"); }
+	catch (Out_of_caps)                         { _error("out of caps during ELF loading"); }
 	catch (Cpu_session::Thread_creation_failed) { _error("unable to create initial thread"); }
 	catch (Cpu_session::Out_of_metadata)        { _error("CPU session quota exhausted"); }
 	catch (Process::Missing_dynamic_linker)     { _error("dynamic linker unavailable"); }

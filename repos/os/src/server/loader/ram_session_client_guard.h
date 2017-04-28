@@ -25,16 +25,16 @@ namespace Genode {
 	{
 		private:
 
-			size_t _amount;        /* total amount */
-			size_t _consumed;      /* already consumed bytes */
-			Lock   _consumed_lock;
+			size_t const _amount;        /* total amount */
+			size_t       _consumed;      /* already consumed bytes */
+			Lock mutable _consumed_lock;
 
 		public:
 
-			Ram_session_client_guard(Ram_session_capability session, size_t amount)
-			: Ram_session_client(session), _amount(amount), _consumed(0) { }
+			Ram_session_client_guard(Ram_session_capability session, Ram_quota amount)
+			: Ram_session_client(session), _amount(amount.value), _consumed(0) { }
 
-			Ram_dataspace_capability alloc(size_t size, Cache_attribute cached)
+			Ram_dataspace_capability alloc(size_t size, Cache_attribute cached) override
 			{
 				Lock::Guard _consumed_lock_guard(_consumed_lock);
 
@@ -52,7 +52,7 @@ namespace Genode {
 				return cap;
 			}
 
-			void free(Ram_dataspace_capability ds)
+			void free(Ram_dataspace_capability ds) override
 			{
 				Lock::Guard _consumed_lock_guard(_consumed_lock);
 
@@ -61,33 +61,35 @@ namespace Genode {
 				Ram_session_client::free(ds);
 			}
 
-			int transfer_quota(Ram_session_capability ram_session, size_t amount)
+			size_t dataspace_size(Ram_dataspace_capability ds) const override
+			{
+				return Ram_session_client::dataspace_size(ds);
+			}
+
+			void transfer_quota(Ram_session_capability ram_session, Ram_quota amount) override
 			{
 				Lock::Guard _consumed_lock_guard(_consumed_lock);
 
-				if ((_amount - _consumed) < amount) {
-					PWRN("Quota exceeded! amount=%lu, size=%lu, consumed=%lu",
-					     _amount, amount, _consumed);
-					return -1;
+				if ((_amount - _consumed) < amount.value) {
+					warning("Quota exceeded! amount=", _amount, ", "
+					        "size=", amount.value, ", "
+					        "consumed=", _consumed);
+					throw Out_of_ram();
 				}
 
-				int result = Ram_session_client::transfer_quota(ram_session, amount);
-
-				if (result == 0)
-					_consumed += amount;
-
-				return result;
+				Ram_session_client::transfer_quota(ram_session, amount);
+				_consumed += amount.value;
 			}
 
-			size_t quota()
+			Ram_quota ram_quota() const override
 			{
-				return _amount;
+				return { _amount };
 			}
 
-			size_t used()
+			Ram_quota used_ram() const override
 			{
 				Lock::Guard _consumed_lock_guard(_consumed_lock);
-				return _consumed;
+				return { _consumed };
 			}
 	};
 }

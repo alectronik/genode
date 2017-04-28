@@ -115,11 +115,11 @@ class Genode::Platform_env : public Env_deprecated,
 		 ** Emergency_ram_reserve interface **
 		 *************************************/
 
-		void release() {
-
-			log("used before freeing emergency=", _resources.ram.used());
+		void release()
+		{
+			log("used before freeing emergency=", _resources.ram.used_ram());
 			_resources.ram.free(_emergency_ram_ds);
-			log("used after freeing emergency=", _resources.ram.used());
+			log("used after freeing emergency=", _resources.ram.used_ram());
 		}
 
 
