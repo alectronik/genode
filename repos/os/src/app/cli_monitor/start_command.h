@@ -117,7 +117,7 @@ class Cli_monitor::Start_command : public Command
 						      _ref_ram_cap, _local_rm, ram, ram_limit,
 						      _yield_response_sigh_cap, _exit_sig_cap);
 				}
-				catch (Genode::Parent::Service_denied) {
+				catch (Genode::Service_denied) {
 					tprintf(terminal, "Error: could not start child  \"%s\"\n",
 					        binary_name);
 					return;

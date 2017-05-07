@@ -118,11 +118,10 @@ class Pci_driver : public Bsd::Bus_driver
 		{
 			Platform::Device_capability cap;
 			/* shift values for Pci interface used by Genode */
-			cap = Genode::retry<Platform::Session::Out_of_metadata>(
-				[&] () { return _pci.next_device(prev,
-				                                 PCI_CLASS_MULTIMEDIA << 16,
-				                                 PCI_CLASS_MASK << 16); },
-				[&] () { _pci.upgrade_ram(4096); });
+			cap = _pci.with_upgrade([&] () {
+				return _pci.next_device(prev,
+				                        PCI_CLASS_MULTIMEDIA << 16,
+				                        PCI_CLASS_MASK << 16); });
 			
 			if (prev.valid())
 				_pci.release_device(prev);
@@ -136,8 +135,12 @@ class Pci_driver : public Bsd::Bus_driver
 		{
 			size_t donate = size;
 
-			return Genode::retry<Platform::Session::Out_of_metadata>(
-				[&] () { return _pci.alloc_dma_buffer(size); },
+			return Genode::retry<Genode::Out_of_ram>(
+				[&] () {
+					return Genode::retry<Genode::Out_of_caps>(
+						[&] () { return _pci.alloc_dma_buffer(size); },
+						[&] () { _pci.upgrade_caps(2); });
+				},
 				[&] () {
 					_pci.upgrade_ram(donate);
 					donate = donate * 2 > size ? 4096 : donate * 2;

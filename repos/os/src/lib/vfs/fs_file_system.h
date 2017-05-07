@@ -368,8 +368,9 @@ class Vfs::Fs_file_system : public File_system
 				Fs_handle_guard node_guard(*this, _fs, node, _handle_space);
 				status = _fs.status(node);
 			}
-			catch (::File_system::Lookup_failed)   { return STAT_ERR_NO_ENTRY; }
-			catch (::File_system::Out_of_metadata) { return STAT_ERR_NO_PERM;  }
+			catch (::File_system::Lookup_failed) { return STAT_ERR_NO_ENTRY; }
+			catch (Genode::Out_of_ram)           { return STAT_ERR_NO_PERM;  }
+			catch (Genode::Out_of_caps)          { return STAT_ERR_NO_PERM;  }
 
 			out = Stat();
 
@@ -531,7 +532,8 @@ class Vfs::Fs_file_system : public File_system
 			catch (::File_system::Lookup_failed)       { return MKDIR_ERR_NO_ENTRY; }
 			catch (::File_system::Name_too_long)       { return MKDIR_ERR_NAME_TOO_LONG; }
 			catch (::File_system::No_space)            { return MKDIR_ERR_NO_SPACE; }
-			catch (::File_system::Out_of_metadata)     { return MKDIR_ERR_NO_ENTRY; }
+			catch (::File_system::Out_of_ram)          { return MKDIR_ERR_NO_ENTRY; }
+			catch (::File_system::Out_of_caps)         { return MKDIR_ERR_NO_ENTRY; }
 
 			return MKDIR_OK;
 		}
@@ -569,7 +571,8 @@ class Vfs::Fs_file_system : public File_system
 			catch (::File_system::Lookup_failed)       { return SYMLINK_ERR_NO_ENTRY; }
 			catch (::File_system::Permission_denied)   { return SYMLINK_ERR_NO_PERM;  }
 			catch (::File_system::No_space)            { return SYMLINK_ERR_NO_SPACE; }
-			catch (::File_system::Out_of_metadata)     { return SYMLINK_ERR_NO_ENTRY; }
+			catch (::File_system::Out_of_ram)          { return SYMLINK_ERR_NO_ENTRY; }
+			catch (::File_system::Out_of_caps)         { return SYMLINK_ERR_NO_ENTRY; }
 
 			return SYMLINK_OK;
 		}
@@ -652,7 +655,8 @@ class Vfs::Fs_file_system : public File_system
 			catch (::File_system::Invalid_name)        { return OPEN_ERR_NAME_TOO_LONG; }
 			catch (::File_system::Name_too_long)       { return OPEN_ERR_NAME_TOO_LONG; }
 			catch (::File_system::No_space)            { return OPEN_ERR_NO_SPACE;      }
-			catch (::File_system::Out_of_metadata)     { return OPEN_ERR_NO_PERM;       }
+			catch (::File_system::Out_of_ram)          { return OPEN_ERR_NO_PERM;       }
+			catch (::File_system::Out_of_caps)         { return OPEN_ERR_NO_PERM;       }
 
 			return OPEN_OK;
 		}
