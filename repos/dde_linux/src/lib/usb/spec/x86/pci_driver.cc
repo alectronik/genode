@@ -57,18 +57,12 @@ class Pci_dev_list
 		Pci_dev_list()
 		{
 			/*
-			 * Functor that is called if the platform driver throws a
-			 * 'Out_of_metadata' exception.
-			 */
-			auto handler = [&] () { Lx::pci()->upgrade_ram(4096); };
-
-			/*
 			 * Obtain first device, the operation may exceed the session quota.
-			 * So we use the 'retry' mechanism.
+			 * So we use the 'with_upgrade' mechanism.
 			 */
-			Platform::Device_capability cap;
-			auto attempt = [&] () { cap = Lx::pci()->first_device(); };
-			Genode::retry<Platform::Session::Out_of_metadata>(attempt, handler);
+			Platform::Device_capability cap =
+				Lx::pci()->with_upgrade([&] () {
+					return Lx::pci()->first_device(); });
 
 			/*
 			 * Iterate over the devices of the platform session.
@@ -77,12 +71,13 @@ class Pci_dev_list
 
 				_pci_caps.insert(new (Lx::Malloc::mem()) Element(cap));
 
-				 /* try next one. Upgrade session * quota on demand.*/
-				auto attempt = [&] () {
-					cap = Lx::pci()->next_device(cap);
-				};
+				/* try next one. Upgrade session quota on demand.*/
+				Platform::Device_capability next_cap;
+				Lx::pci()->with_upgrade([&] () {
+					next_cap = Lx::pci()->next_device(cap); });
 
-				Genode::retry<Platform::Session::Out_of_metadata>(attempt, handler);
+				Lx::pci()->release_device(cap);
+				cap = next_cap;
 			}
 		}
 
