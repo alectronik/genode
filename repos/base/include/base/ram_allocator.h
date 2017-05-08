@@ -33,11 +33,6 @@ namespace Genode {
 
 struct Genode::Ram_allocator
 {
-	class Alloc_failed    : public Exception    { };
-	class Quota_exceeded  : public Alloc_failed { };
-	class Out_of_metadata : public Alloc_failed { };
-
-
 	/**
 	 * Allocate RAM dataspace
 	 *
@@ -45,8 +40,8 @@ struct Genode::Ram_allocator
 	 * \param  cached  selects cacheability attributes of the memory,
 	 *                 uncached memory, i.e., for DMA buffers
 	 *
-	 * \throw Quota_exceeded
-	 * \throw Out_of_metadata
+	 * \throw  Out_of_ram
+	 * \throw  Out_of_caps
 	 *
 	 * \return capability to new RAM dataspace
 	 */
@@ -92,7 +87,6 @@ class Genode::Constrained_ram_allocator : public Ram_allocator
 			size_t page_aligned_size = align_addr(size, 12);
 
 			_ram_guard.withdraw(Ram_quota{page_aligned_size});
-			_cap_guard.withdraw(Cap_quota{1});
 
 			return _ram_alloc.alloc(page_aligned_size, cached);
 		}
@@ -104,7 +98,6 @@ class Genode::Constrained_ram_allocator : public Ram_allocator
 			_ram_alloc.free(ds);
 
 			_ram_guard.replenish(Ram_quota{size});
-			_cap_guard.replenish(Cap_quota{1});
 		}
 
 		size_t dataspace_size(Ram_dataspace_capability ds) const override
