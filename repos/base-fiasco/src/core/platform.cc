@@ -484,5 +484,3 @@ void Platform::wait_for_exit()
 	sleep_forever();
 }
 
-
-void Core_parent::exit(int exit_value) { }
