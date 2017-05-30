@@ -256,16 +256,110 @@ same API subdirectory.
 Depot management
 ################
 
+The tools for managing the depot content reside under the _tool/depot/_
+directory. When invoked without arguments, each tool prints a brief
+description of the tool and its arguments.
+
+Unless stated otherwise, the tools are able to consume any number of archives
+as arguments. By default, they perform their work sequentially. This can be
+changed by the '-j<N>' argument, where <N> denotes the desired level of
+parallelization. For example, by specifying '-j4' to the _tool/depot/build_
+tool, four CPU cores are utilized during the creation of binary archives.
+
+
+Downloading archives
+====================
+
+* Downloading (verifying)
+  * Dependency resolution
+
+! ./tool/depot/download genodelabs/src/zlib-2017-05-30
+
+
+
+Building binary archives from source archives
+=============================================
+
+With the depot populated with source and API archives, one can use the
+_tool/depot/build_ tool to produce binary archives. The arguments have the
+form <user>/bin/<arch>/<src-name> where <arch> stands for the targeted
+CPU architecture. For example, the following command builds the 'zlib'
+library for the 64-bit x86 architecture. It uses four CPU cores during the
+build process.
+
+! ./tool/depot/build genodelabs/bin/x86_64/zlib-2017-05-30 -j4
+
+Note that the command expects a specific version of the source archive as
+argument. The depot may contain several version. So the user has to decide,
+which one to build.
+
+After the tools finished, the freshly built binary archive can be found in the
+depot within the _genodelabs/bin/_ subdirectory. If the source archive
+implements an API (if it is a library), the result is stored at
+_bin/<arch>/<api>-<version>/<src>-<version>/_. Otherwise, the result is stored
+at _bin/<arch>/<src>-<version>/_. Only the final result of the built process
+is preserved. In the example above, that would be the _zlib.lib.so_ library.
+
+For debugging purposes, it might be interesting to inspect the intermediate
+state of the build. This is possible by adding 'KEEP_BUILD_DIR=1' as argument
+to the build command. The binary's intermediate build directory can be
+found besides the binary archive's location named with '.build' suffix.
+
+By default, the build tool won't attempt to rebuild a binary archive that is
+already present in the depot. However, it is possible to force a rebuild via
+the 'FORCE=1' argument.
+
+
+Publishing archives
+===================
+
+Archives located in the depot can be conveniently made available to the public
+using the _tool/depot/publish_ tool. Given an archive path, the tool takes
+care of determining all archives that are implicitly needed by the specified
+one, wrapping the archive's content into compressed tar archives, and signing
+those.
+
+As a precondition, the tool requires you to possess the private key that
+matches the _depot/<you>/pubkey_ file within your depot. The key pair should
+be present in the key ring of your GNU privacy guard.
+
+To publish archives, one needs to specify the specific version to publish.
+For example:
+
+! ./tool/depot/publish <you>/pkg/wm-2017-05-30
+
+The command checks that the specified archive and all dependencies are present
+in the depot. It then proceeds with the archiving and signing operations. For
+the latter, the pass phrase for your private key will be requested. The
+publish toll prints the information about the processed archives, e.g.:
+
+! publish /.../genode/public/<you>/pkg/wm-2017-05-30.tgz
+! publish /.../genode/public/<you>/src/decorator-2017-05-30.tgz
+! publish /.../genode/public/<you>/src/floating_window_layouter-2017-05-30.tgz
+! publish /.../genode/public/<you>/src/report_rom-2017-05-30.tgz
+! publish /.../genode/public/<you>/src/wm-2017-05-30.tgz
+! publish /.../genode/public/<you>/raw/wm-2017-05-30.tgz
+! publish /.../genode/public/<you>/api/base-2017-05-30.tgz
+! publish /.../genode/public/<you>/api/framebuffer_session-2017-05-30.tgz
+! publish /.../genode/public/<you>/api/gems-2017-05-30.tgz
+! publish /.../genode/public/<you>/api/input_session-2017-05-30.tgz
+! publish /.../genode/public/<you>/api/nitpicker_gfx-2017-04-24.tgz
+! publish /.../genode/public/<you>/api/nitpicker_session-2017-05-30.tgz
+! publish /.../genode/public/<you>/api/os-2017-05-30.tgz
+! publish /.../genode/public/<you>/api/report_session-2017-05-30.tgz
+! publish /.../genode/public/<you>/api/scout_gfx-2017-04-24.tgz
+
+According to the output, the tool populates a directory called _public/_
+at the root of the Genode source tree with the to-be-published archives.
+The content of the _public/_ directory is now prepared to be copied to a
+web server, e.g., by using rsync.
+
+
 * Populating the depot
   * Extract from source tree
   * Building binary archives
   * (Download)
 
-* Publishing (signing)
-  * Dependency resolution
-
-* Downloading (verifying)
-  * Dependency resolution
 
 
 Automated extraction of archives from the source tree
