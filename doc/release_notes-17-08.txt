@@ -113,6 +113,10 @@ workload by submitting an execution buffer. The GPU multiplexer will then enqueu
 the request and schedule all pending requests sequentially. Once the request is
 completed, the client is notified via a completion signal.
 
+[image multi_gl]
+  Example scenario of multiple OpenGL programs that use the new GPU multiplexer
+  for hardware-accelerated rendering.
+
 We consider this first version of the GPU driver as experimental. As of now, it
 only manages the render engine of the GPU. Mode-setting or rather display
 handling must be performed by another component. Currently, the VESA driver is
