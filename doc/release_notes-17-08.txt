@@ -133,11 +133,11 @@ The seL4 kernel on ARM and 64-bit x86 hardware
 ##############################################
 
 With the 16.08 release, we brought the seL4 support to a level to be considered
-a serious combatant with the other supported kernels. At the time, Genode's
+being on a par with the other supported kernels. At the time, Genode's
 use of seL4 was limited to 32-bit x86 platforms.
 
 With this release, we extend the platform support to ARM and 64-bit x86.
-We started this line of work with upgrading the kernel from version 3.2.0 to
+We started this line of work by upgrading the kernel from version 3.2.0 to
 5.2.0 and finally to seL4 6.0. With the upgrade, we were able to drop several
 Genode-specific seL4 patches, which were required in the 16.08 release. One
 major improvement of version 6.0 compared to earlier versions is the handling
@@ -169,9 +169,9 @@ components _top_ (text-based) and _cpu_load_monitor_ (graphical) are now
 usable on Genode/seL4.
 Finally, as we are currently exploring the support for booting various kernels
 via UEFI on x86, we took the chance to investigate the steps needed to boot
-seL4 via UEFI. With UEFI, there is no compatibility support module (CSM) for
-the legacy BIOS boot support anymore. We extended the seL4 kernel for Genode
-according to the Multiboot2 specification, which enables us to start
+seL4 via UEFI. UEFI firmware does not always provide a compatibility support
+module (CSM) for legacy BIOS boot support. We extended the seL4 kernel for
+Genode according to the Multiboot2 specification, which enables us to start
 Genode/seL4 together with GRUB2 - as an UEFI capable bootloader - on UEFI
 machines without or with disabled CSM support.
 
@@ -210,7 +210,7 @@ New report server for capturing reports to files
 
 The *Report* session is a simple mechanism for components to publish structured data
 without the complexity of a file-system layer. In the simplest case, a client component
-will produce a report and communicate it directly to the component acting as server.
+will produce a report and communicate it directly to a component acting as a server.
 The disadvantage is that the report client becomes reliant on the liveliness and
 presence of the consumer component. So in the more robust case, the *report_rom*
 component acts as the server hosting the *Report* service as well as a *ROM* service
@@ -571,10 +571,10 @@ revision 1.9.1. Unfortunately, this implied that dynamic linking was not support
 on the RISC-V architecture anymore. Since dynamic linking is now required for almost all
 Genode applications by default, this became a severe limitation. Therefore, we revisited our
 RISC-V implementation - in particular the kernel entry code -
-to lift the limitation to statically linked binaries.
+to lift the limitation of being able to execute only statically linked binaries.
 
 Additionally, we integrated the Berkeley Boot Loader (BBL), which bootstraps the
-system and implements machine mode, more closely into our build infrastructure.
+system and implements the machine mode, more closely into our build infrastructure.
 We also added a new timer implementation to base-hw by using the *set timeout SBI*
 call of BBL.
 
