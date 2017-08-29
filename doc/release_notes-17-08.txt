@@ -8,8 +8,33 @@
 
 
 
-;intro
-;@nfeske
+The flagship feature of Genode 17.08 has been in the works for more than a
+year: The support for hardware-accelerated graphics on Intel Gen-8 GPUs. This
+is an especially challenging topic because it is riddled with terminology,
+involves highly complex software stacks, carries a twisted history with it,
+and remains to be a moving target. It took up a lot of patience to build up a
+profound understanding of the existing driver architectures and the mechanisms
+offered by modern graphic hardware. On the other hand, with the proliferation
+of hardware-based sandboxing features like virtual GPU memory and hardware
+contexts, we found that now is the perfect time for a clean-slate design of a
+microkernelized GPU driver.
+Section [Hardware-accelerated graphics for Intel Gen-8 GPUs] introduces this
+work, which includes our new GPU multiplexer as well as the integration with
+the client-side Mesa protocol stack.
+
+The second focus of the current release is the extension of Genode's supported
+base platforms. Most prominently, we upgrade the seL4 kernel to version 6.0
+while extending the architecture support from 32-bit x86 to ARM and 64-bit
+x86 (Section [The seL4 kernel on ARM and 64-bit x86 hardware]). To bring
+Genode closer to cloud-computing scenarios, we added basic support for
+executing Genode scenarios as Xen DomU domains (Section [Genode as Xen DomU]).
+Furthermore, the Muen separation kernel has been updated to a current version.
+As a cross-kernel effort, there is work under way to boot Genode-based
+systems via UEFI, currently addressing the NOVA, base-hw, and seL4 kernels.
+
+Among the many other functional additions are a new VFS plugin for accessing FAT
+file systems, new components like _sequence_ and _fs_report_ that aid new system
+compositions, and our evolving custom package-management infrastructure.
 
 
 Hardware-accelerated graphics for Intel Gen-8 GPUs
