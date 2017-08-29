@@ -14,7 +14,7 @@ is an especially challenging topic because it is riddled with terminology,
 involves highly complex software stacks, carries a twisted history with it,
 and remains to be a moving target. It took up a lot of patience to build up a
 profound understanding of the existing driver architectures and the mechanisms
-offered by modern graphic hardware. On the other hand, with the proliferation
+offered by modern graphics hardware. On the other hand, with the proliferation
 of hardware-based sandboxing features like virtual GPU memory and hardware
 contexts, we found that now is the perfect time for a clean-slate design of a
 microkernelized GPU driver.
