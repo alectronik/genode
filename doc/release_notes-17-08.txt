@@ -170,7 +170,7 @@ usable on Genode/seL4.
 Finally, as we are currently exploring the support for booting various kernels
 via UEFI on x86, we took the chance to investigate the steps needed to boot
 seL4 via UEFI. UEFI firmware does not always provide a compatibility support
-module (CSM) for legacy BIOS boot support. We extended the seL4 kernel for
+module (CSM) for legacy BIOS boot support. Hence, we extended the seL4 kernel for
 Genode according to the Multiboot2 specification, which enables us to start
 Genode/seL4 together with GRUB2 - as an UEFI capable bootloader - on UEFI
 machines without or with disabled CSM support.
@@ -339,7 +339,7 @@ Making block sessions read-only by default
 Genode server components are expected to apply the safest and strictest
 behavior when exposing cross-component state or persistent data. In practice
 the *Block* and *File_system* servers only allow access to clients with
-explictly configured local policies. The *File_system* servers enforce an
+explicitly configured local policies. The *File_system* servers enforce an
 additional provision that sessions are implicitly read-only unless overridden
 by policy. This release introduces a similar restriction to the AHCI driver and
 partition multiplexer. Clients of these servers require an affirmative "writeable"
