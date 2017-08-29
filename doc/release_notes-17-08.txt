@@ -18,7 +18,7 @@ Hardware-accelerated graphics for Intel Gen-8 GPUs
 The ability to leverage hardware-accelerated graphics is generally taken for
 granted in modern commodity operating systems. The user experience of
 modern desktop environments, web-browser performance, and obviously games
-depend on it. On the other hand, the benefits of hardware-accelerated graphics
+depend on it. On the other hand, the benefit of hardware-accelerated graphics
 comes at the expense of tremendous added complexity in the lower software
 stack, in particular in system components that need to be ultimately trusted.
 For example, with circa 100 thousand lines of code, the Intel GPU driver in
@@ -153,7 +153,7 @@ handle the differences in the page table sizes between the three
 architectures.
 
 For the ARM support, we decided to enable the i.MX6 FreeScale based SoC, namely
-the Wandboard Quard board. Since the seL4 kernel interface provides no timeout
+the Wandboard Quad board. Since the seL4 kernel interface provides no timeout
 support, we revived a user-level timer driver that we originally developed
 for our own base-hw kernel. The so-called EPIT timer is part of most i.MX SoCs.
 
@@ -364,7 +364,7 @@ significantly raised the standards in user-level timing, it also sharpened our
 view on the precision of the output of timer drivers and timestamps, which act
 as input for the framework. This revealed several problems that were
 previously not identifiable. For instance, we improved the accuracy and
-stability of the time values provided by the drivers for the Raspberry-PI
+stability of the time values provided by the drivers for the Raspberry-Pi
 timer, the Cortex-A9 timer, the PIT, and the LAPIC. We also were able to
 further optimize the calibration of the TSC in the NOVA kernel.
 
@@ -381,7 +381,7 @@ and kernels that Genode runs on.
 Finally, we were able to extend the application of the timeout framework. Most
 notably, our C runtime uses it as timing source to the benefit of all
 libc-using components.
-Another noteworthy case is the USB driver on the Raspberry PI. It
+Another noteworthy case is the USB driver on the Raspberry Pi. It
 previously couldn't rely on the default Genode timing but required a local
 hardware timer to reach the precision that the host controller expected from
 software. With the timeout framework, this workaround could be removed from
@@ -615,7 +615,7 @@ EFI system partition in a GUID partition table (GPT). The image is equipped by
 the new 'image/uefi' module with the GRUB2 boot loader, a GRUB2 configuration
 and the Genode run scenario. The final image can be copied with 'dd' to a
 bootable USB stick. Additionally, we added support to boot
-such an image on Qemu leveraging Tianocore's (http://www.tianocore.org) UEFI
+such an image on Qemu leveraging TianoCore's (http://www.tianocore.org) UEFI
 firmware.
 
 As a side project, minor virtualization support for AMD has been added to
