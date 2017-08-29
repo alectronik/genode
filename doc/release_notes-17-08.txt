@@ -158,7 +158,7 @@ The seL4 kernel on ARM and 64-bit x86 hardware
 ##############################################
 
 With the 16.08 release, we brought the seL4 support to a level to be considered
-being on a par with the other supported kernels. At the time, Genode's
+being on par with the other supported kernels. At the time, Genode's
 use of seL4 was limited to 32-bit x86 platforms.
 
 In the current release, we extend the platform support to ARM and 64-bit x86.
@@ -180,9 +180,9 @@ the Wandboard Quad board. Since the seL4 kernel interface provides no timeout
 support, we revived a user-level timer driver that we originally developed
 for our custom base-hw kernel: The so-called EPIT timer, which is part of most i.MX SoCs.
 
-After the essential work for the 3 platforms had been accomplished - surprisingly
-for us in less time than expected - we then had time to enable
-additional features.
+We finished the essential work for the mentioned three platforms in
+less time than expected and, thereby, had spare time to address additional
+features.
 
 First, we enabled multiprocessor support for Genode/seL4 on x86 and
 thread-priority support for all seL4 platforms. Additionally, we were able to
@@ -195,8 +195,8 @@ via UEFI on x86, we took the chance to investigate the steps needed to boot
 seL4 via UEFI. UEFI firmware does not always provide a compatibility support
 module (CSM) for legacy BIOS boot support. Hence, we extended the seL4 kernel for
 Genode according to the Multiboot2 specification, which enables us to start
-Genode/seL4 together with GRUB2 - as an UEFI capable bootloader - on UEFI
-machines without or with disabled CSM support.
+Genode/seL4 together with GRUB2 - as an UEFI capable bootloader - on
+machines missing CSM support.
 
 
 Base framework and OS-level infrastructure
@@ -217,11 +217,11 @@ page faults for DMA transactions, DMA buffers must always be eagerly mapped.
 The so-called device PD hid this gap for NOVA. In anticipation of adding
 IOMMU support for more kernels, we desired to generalize the device-PD
 mechanism by introducing an explicit way to trigger the insertion of DMA
-memory into the right page tables.
+memory into the proper page tables.
 
-We extended the PD-session interface got extended by a 'map' function, which takes a
+We extended the PD-session interface by a 'map' function, which takes a
 virtual memory region of the PD's virtual address space as argument. The page frames of the
-previously attached dataspace or dataspaces are added eagerly by core to
+previously attached dataspaces are added eagerly by core to
 the IOMMU page-tables.
 With this explicit 'map' support, we were able to replace the Genode/NOVA-specific
 device-PD implementation with a generic one, which will easily
@@ -231,30 +231,30 @@ accommodate other kernels in the future.
 New report server for capturing reports to files
 ================================================
 
-The *Report* session is a simple mechanism for components to publish structured data
+The report session is a simple mechanism for components to publish structured data
 without the complexity of a file-system layer. In the simplest case, a client component
 will produce a report and communicate it directly to a component acting as a server.
 The disadvantage is that the report client becomes reliant on the liveliness and
-presence of the consumer component. So in the more robust case, the *report_rom*
-component acts as the server hosting the *Report* service as well as a *ROM* service
+presence of the consumer component. So in the more robust case, the _report_rom_
+component acts as the server hosting the report service as well as a ROM service
 for components consuming reports.
 
-The *report_rom* server permits *ROM* access only to clients matching an explicit
+The _report_rom_ server permits ROM access only to clients matching an explicit
 configuration policy. This is good for security but opaque to a user. Reports
-can only be read where an explicit policy is in place and only a single *Report*
-session can report to an active *ROM* session.
+can only be read where an explicit policy is in place and only a single report
+session can report to an active ROM session.
 
-The new *fs_report* component is a friendlier and more flexible *Report* server.
+The new _fs_report_ component is a friendlier and more flexible report server.
 Reports are written to a file system using a file and directory hierarchy
 that expresses session routing. This allows for intuitive report inspection and
-injection via a file system. When used with the *ram_fs* and *fs_rom* servers,
-it can also replicate the functionality of *report_rom*.
+injection via a file system. When used with the _ram_fs_ and _fs_rom_ servers,
+it can also replicate the functionality of _report_rom_.
 
 
 New runtime environment for starting components sequentially
 ============================================================
 
-The *init* component is a prime example of software with an emphasis on function over
+The _init_ component is a prime example of software with an emphasis on function over
 features. It is the fundamental building block for combining components yet its
 behavior is simple and without heuristics. Like other contemporary init managers,
 it starts components in parallel, but to a more extreme degree in that it has no
@@ -265,16 +265,16 @@ make service announcements and how quickly they respond to client requests.
 In some cases, the execution of one component must not occur until the execution
 of another component ends, be it that the first produces output that is consumed
 by the second, or that the two contend for a service that cannot be multiplexed.
-*Init* contains no provisions to enforce ordering. But we are free to define new
+Init contains no provisions to enforce ordering. But we are free to define new
 behaviors in other management components.
 
-The solution to the problem of ordering is the *sequence* component. *Sequence*
+The solution to the problem of ordering is the _sequence_ component. Sequence
 walks a list of children and executes them in order, one at a time. With only
 one child active, there is no need for any local resource or routing management.
-By applying the same session label transformations as *init*, external routing
+By applying the same session label transformations as init, external routing
 and policy handling are unchanged.
 
-An example of ordering a producer and consumer within an *init* configuration follows:
+An example of ordering a producer and consumer within an init configuration follows:
 ! <start name="sequence">
 !   <resource name="RAM" quantum="128M"/>
 !   <config>
@@ -308,8 +308,8 @@ Instead of booting in VGA text mode and leaving the switch to a graphics mode
 so-called graphics output protocol as a means to setup a reasonable default graphics
 mode prior booting the operating system. In order to produce graphical output,
 the operating system merely has to know the physical address and layout of the
-frame buffer. Genode's core exposes this information as a so-called
-"platform_info" ROM module. The new _fb_boot_drv_ driver picks up this
+frame buffer. Genode's core exposes this information as the
+_platform_info_ ROM module. The new _fb_boot_drv_ driver picks up this
 information to provide a Genode framebuffer session interface. Hence, on
 UEFI-based systems, it can be used as a drop-in replacement for the VESA
 driver. In contrast to the VESA driver, however, it is not able to switch
@@ -328,8 +328,8 @@ we added support for non-blocking reads from the VFS in the form of the
 'read_ready()', 'queue_read()', and 'complete_read()' functions. Since then, it
 has become obvious that blocking within the VFS is not only problematic in the VFS
 server itself when multiple clients are connected, but also when the VFS is
-deployed in a multi-threaded environment and a VFS plugin needs to reliably wait 
-for I/O completion signals.
+deployed in a multi-threaded environment and a VFS plugin needs to reliably wait
+for I/O-completion signals.
 
 For this reason, we reworked the interface of the VFS even more towards
 non-blocking operation and adapted the existing users of the VFS accordingly.
@@ -362,17 +362,17 @@ Making block sessions read-only by default
 
 Genode server components are expected to apply the safest and strictest
 behavior when exposing cross-component state or persistent data. In practice
-the *Block* and *File_system* servers only allow access to clients with
-explicitly configured local policies. The *File_system* servers enforce an
+block and file-system servers only allow access to clients with
+explicitly configured local policies. The file-system servers enforce an
 additional provision that sessions are implicitly read-only unless overridden
 by policy. This release introduces a similar restriction to the AHCI driver and
-partition multiplexer. Clients of these servers require an affirmative "writeable"
+partition multiplexer. Clients of these servers require an affirmative 'writeable'
 attribute on policies to permit the writing of blocks. Write permission at these
-servers may also be revoked by components that forward *Block* session requests
-by placing _writeable="no"_ into session-request arguments.
+servers may also be revoked by components that forward block-session requests
+by placing 'writeable="no"' into session-request arguments.
 
-_All users of *ahci_drv* and *part_blk* are advised that this change may break
-existing configurations without "writeable" policies_.
+All users of _ahci_drv_ and _part_blk_ are advised that this change may break
+existing configurations without explicit 'writeable' policies.
 
 
 Refined time handling
@@ -380,7 +380,7 @@ Refined time handling
 
 Release 17.05 introduced a
 [https://genode.org/documentation/release-notes/17.05#New_API_for_user-level_timing - new API for user-level timing]
-named *timeout framework*. Together with this new framework
+named _timeout framework_. Together with this new framework
 came a comprehensive test that stresses all aspects of the interface.
 During the past few months, this test has turned out to be an enrichment for Genode
 far beyond its original scope. As the test
@@ -394,13 +394,13 @@ further optimize the calibration of the TSC in the NOVA kernel.
 
 Additionally, the test also helped us to refine the timeout framework itself. The
 initial calibration of the framework - that previously took about 1.5 seconds -
-is now performed much quicker and makes microseconds-precise time
+is now performed much quicker. This makes microseconds-precise time
 available immediately after the timer connection switched to the
 modern fine-grained mode of operation,
 which is a prerequisite for hardware drivers that need such precision
 during their early initialization phase. The calculations inside the framework
 also became more flexible to better fit the characteristics of all the hardware
-and kernels that Genode runs on.
+and kernels Genode supports.
 
 Finally, we were able to extend the application of the timeout framework. Most
 notably, our C runtime uses it as timing source to the benefit of all
@@ -415,16 +415,16 @@ the driver.
 FatFS-based VFS plugin
 ======================
 
-Genode has supported VFAT file-systems since the 09.11 release when the
+Genode has supported VFAT file-systems since the 9.11 release when the
 [http://elm-chan.org/fsw/ff/00index_e.html - FatFS] library was first ported.
 The 11.08 release fit the library into the libc plugin architecture and
-in 12.08 FatFS was used in the *ffat_fs* *File_system* server.
+in 12.08 FatFS was used in the _ffat_fs_ file-system server.
 Now, the 17.08 release revisits FatFS to mold the library into the newer and
 more flexible VFS plugin system.
-The *vfs_fatfs* plugin may be fitted into the VFS server or used directly by
+The _vfs_fatfs_ plugin may be fitted into the VFS server or used directly by
 arbitrary components linked to the VFS library. As the collection of VFS plugins
-in combination with the VFS *File_system* server has a lower net maintenance cost
-than multiple *File_system* servers, the *ffat_fs* server may be retired in a
+in combination with the VFS file-system server has a lower net maintenance cost
+than multiple file-system servers, the _ffat_fs_ server will be retired in a
 future release.
 
 
@@ -491,7 +491,8 @@ OpenGL support in our SDL1 port.
 
 As playground, there are a few OpenGL examples. The demos are located under
 _repos/libports/src/test/mesa_demos_, which use the EGLUT bindings. There
-are also some SDL based examples in _repos/world/src/test/sdl_opengl_.
+are also some SDL based examples in the world repository under
+_repos/world/src/test/sdl_opengl_.
 
 
 Package management
@@ -583,8 +584,8 @@ UEFI support
 
 Analogously to our work on the seL4 and NOVA kernels in this release, we
 extended our base-hw kernel to become a Multiboot2 compliant kernel. When used
-together with GRUB2, it can be started on x86 UEFI machines without or with
-disabled legacy BIOS support (called CSM).
+together with GRUB2, it can be started on x86 UEFI machines missing
+legacy BIOS support (i.e., CSM).
 
 
 RISC-V
@@ -599,7 +600,7 @@ to lift the limitation of being able to execute only statically linked binaries.
 
 Additionally, we integrated the Berkeley Boot Loader (BBL), which bootstraps the
 system and implements the machine mode, more closely into our build infrastructure.
-We also added a new timer implementation to base-hw by using the *set timeout SBI*
+We also added a new timer implementation to base-hw by using the _set timeout SBI_
 call of BBL.
 
 What still remains missing is proper FPU support. While we are building the
@@ -622,18 +623,18 @@ NOVA microhypervisor
 ====================
 
 The current release extends NOVA to become a Multiboot2 compliant kernel. Used
-together with GRUB2, NOVA can now be started on x86 UEFI machines without or
-with disabled legacy BIOS support (called CSM).
+together with GRUB2, NOVA can now be started on x86 UEFI machines missing
+legacy BIOS support (called CSM).
 
 GRUB2 provides the initial ACPI RSDP (Root System Description Pointer) to a
 Multiboot2 kernel. The RSDP contains vital information required to bootstrap
 the kernel and the operating system in general on today's x86 machines. To
 make this information available to the user-level ACPI and ACPICA drivers, the
 kernel propagates the RSDP to Genode's core, which - in turn - exposes it to
-the user land in the form of a "platform_info" ROM module.
+the user land as part of the _platform_info_ ROM module.
 
 In order to ease the setup of an UEFI bootable image, we added a new image
-module to our "run-tool" infrastructure. The run option 'image/uefi' can be
+module to our run-tool infrastructure. The run option 'image/uefi' can be
 used instead of 'image/iso' in order to create a raw image that contains a
 EFI system partition in a GUID partition table (GPT). The image is equipped by
 the new 'image/uefi' module with the GRUB2 boot loader, a GRUB2 configuration,
