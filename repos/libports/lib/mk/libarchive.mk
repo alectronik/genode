@@ -11,11 +11,14 @@ FILTER_OUT_SRC_C := archive_disk_acl_darwin.c \
                     archive_entry_copy_bhfi.c \
                     archive_read_disk_windows.c \
                     archive_windows.c \
-                    archive_write_disk_windows.c
+                    archive_write_disk_windows.c \
+                    filter_fork_posix.c
 
-SRC_C := $(filter-out $(FILTER_OUT_SRC_C),$(ALL_SRC_C))
 
-vpath %.c $(LIBARCHIVE_DIR)/libarchive
+SRC_C := $(filter-out $(FILTER_OUT_SRC_C),$(ALL_SRC_C)) no_fork.c
+
+vpath %.c       $(LIBARCHIVE_DIR)/libarchive
+vpath no_fork.c $(REP_DIR)/src/lib/libarchive
 
 CC_OPT += -DPLATFORM_CONFIG_H=\"genode_config.h\"
 
