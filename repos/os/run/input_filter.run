@@ -82,6 +82,52 @@ append config {
 		<provides> <service name="Input"/> </provides>
 		<config>
 
+			<message string="reconfigure while key repeat is scheduled"/>
+
+			<filter_config>
+				<input label="usb"/>
+				<output>
+					<chargen>
+						<input name="usb"/>
+						<repeat delay_ms="6000" rate_ms="2000"/>
+						<map> <key name="KEY_A" char="a"/> </map>
+					</chargen>
+				</output>
+			</filter_config>
+			<sleep ms="250"/>
+			<usb>
+				<press code="KEY_A"/>
+			</usb>
+			<sleep ms="100"/>
+			<filter_config>
+				<input label="usb"/>
+				<output>
+					<chargen>
+						<input name="usb"/>
+						<repeat delay_ms="6000" rate_ms="2000"/>
+						<map>
+							<key name="KEY_A" char="b"/>
+						</map>
+					</chargen>
+				</output>
+			</filter_config>
+			<sleep ms="250"/>
+			<usb>
+				<release code="KEY_A"/>
+			</usb>
+			<sleep ms="250"/>
+			<usb>
+				<press code="KEY_A"/>
+				<release code="KEY_A"/>
+			</usb>
+			<expect_press   code="KEY_A"/>
+			<expect_char    char="a"/>
+			<expect_release code="KEY_A"/>
+			<expect_press   code="KEY_A"/>
+			<expect_char    char="a"/>
+			<expect_release code="KEY_A"/>
+
+
 			<message string="test merging of two input sources"/>
 
 			<filter_config>

@@ -352,6 +352,7 @@ struct Input_filter::Main : Input_connection::Avail_handler,
 	void _handle_config()
 	{
 		_config.update();
+		log("_handle_config");
 
 		bool const force = _config.xml().attribute_value("force", false);
 		bool const idle  = _input_connections_idle();
@@ -370,6 +371,7 @@ struct Input_filter::Main : Input_connection::Avail_handler,
 
 	void _apply_config()
 	{
+		log("_apply_config ", _config.xml());
 		_input_connections.for_each([&] (Registered<Input_connection> &conn) {
 			destroy(_heap, &conn); });
 
@@ -390,6 +392,8 @@ struct Input_filter::Main : Input_connection::Avail_handler,
 			catch (Xml_node::Nonexistent_attribute) {
 				warning("ignoring invalid input node '", input_node); }
 		});
+
+		log("reconstruct filter chain");
 
 		try {
 			if (_config.xml().has_sub_node("output"))
